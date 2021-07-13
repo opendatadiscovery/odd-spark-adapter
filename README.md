@@ -64,3 +64,6 @@ spark-submit \
 --jars target/agent.jar target/example.jar \
 10 target/pi_out
 ```
+
+`opendatadiscovery.endpoint` used to specify endpoint to 
+report DataProcessor/DataProcessorRun to platform.

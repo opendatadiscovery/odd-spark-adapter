@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -26,6 +27,14 @@ public class Utils {
         jacksonMapper.configure(SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false);
         jacksonMapper.configure(SerializationConfig.Feature.USE_ANNOTATIONS, true);
     }
+
+    public static final DateTimeFormatter isoFormatter = new DateTimeFormatterBuilder()
+            .parseCaseInsensitive()
+            .append(DateTimeFormatter.ISO_LOCAL_DATE)
+            .appendLiteral('T')
+            .append(DateTimeFormatter.ISO_LOCAL_TIME)
+            .append(DateTimeFormatter.ofPattern("Z"))
+            .toFormatter(Locale.getDefault());
 
     public static Set<RDD<?>> flattenRDDs(RDD<?> rdd) {
         Set<RDD<?>> rdds = new HashSet<>();
@@ -74,7 +83,6 @@ public class Utils {
     }
 
     static String timestampToString(long time) {
-        return DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(
-                new Date(time).toInstant().atOffset(ZoneOffset.UTC));
+        return isoFormatter.format(new Date(time).toInstant().atOffset(ZoneOffset.UTC));
     }
 }

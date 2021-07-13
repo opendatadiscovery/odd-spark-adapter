@@ -33,5 +33,11 @@ public class UtilsTest {
                 "    \"status\" : null\n" +
                 "  }\n" +
                 "}", actual);
-    }
+     }
+
+     @Test
+     public void testTimestampToString() {
+         String actual = Utils.timestampToString(1000000);
+         assertEquals("1970-01-01T00:16:40+0000", actual);
+     }
 }
