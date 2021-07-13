@@ -74,8 +74,7 @@ public class Utils {
     }
 
     static String timestampToString(long time) {
-        String offsetTime = DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(
-                new Date(time).toInstant().atOffset(ZoneOffset.UTC)); // TODO
-        return offsetTime;
+        return DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(
+                new Date(time).toInstant().atOffset(ZoneOffset.UTC));
     }
 }

@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
-import java.util.function.Function;
 
 import javassist.ClassPool;
 import javassist.CtClass;
@@ -18,8 +17,6 @@ public class PairRDDFunctionsTransformer implements ClassFileTransformer {
 
     public static final String CODE =
             String.format("{ %s.registerOutput(this, conf); }", SparkListener.class.getName());
-
-    public static final String MYCODE = "{System.out.println(\"Instrumented!\"); }";
 
     void tryTransform(CtMethod method, TransformFunc func) {
         try {

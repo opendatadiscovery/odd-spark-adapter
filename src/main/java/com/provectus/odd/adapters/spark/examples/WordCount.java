@@ -8,7 +8,6 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 
-import javax.naming.SizeLimitExceededException;
 import java.util.Arrays;
 
 @Slf4j

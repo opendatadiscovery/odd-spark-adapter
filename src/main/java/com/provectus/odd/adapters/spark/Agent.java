@@ -1,18 +1,15 @@
 package com.provectus.odd.adapters.spark;
 
-import java.lang.instrument.Instrumentation;
-import java.net.URISyntaxException;
 import lombok.extern.slf4j.Slf4j;
-//import com.provectus.odd.adapters.BigQueryRelationTransformer;
-//import com.provectus.odd.adapters.PairRDDFunctionsTransformer;
-//import com.provectus.odd.adapters.SparkContextTransformer;
+
+import java.lang.instrument.Instrumentation;
 
 @Slf4j
 public class Agent {
     /** Entry point for -javaagent, pre application start */
     @SuppressWarnings("unused")
     public static void premain(String agentArgs, Instrumentation inst) {
-        log.info("Agent.premain(%s, %s)", agentArgs, inst);
+        log.info("Agent.premain({}, {})", agentArgs, inst);
         System.out.println("agent.premain");
         instrument(inst);
 //        try {

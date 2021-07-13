@@ -2,15 +2,13 @@ package com.provectus.odd.api;
 
 import lombok.Getter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 @Getter
 public class EntitiesRequest {
-    String data_source_oddrn;
-    List<DataEntity> items;
+    final String data_source_oddrn;
+    final List<DataEntity> items;
 
     public EntitiesRequest(String aDataSourceOddrn, List<DataEntity> aItems) {
         this.data_source_oddrn = aDataSourceOddrn;

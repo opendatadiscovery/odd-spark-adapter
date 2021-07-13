@@ -24,7 +24,8 @@ import java.util.*;
 public class SparkListener extends org.apache.spark.scheduler.SparkListener {
     public static final String ENDPOINT_CONFIG_KEY = "opendatadiscovery.endpoint";
     public static final String SPARK_DATA_SOURCE_ODRNN = "//spark";
-    private static JobRegistry registry = new JobRegistry();
+
+    private static final JobRegistry registry = new JobRegistry();
 
     private OddClient client = null;
 
@@ -98,6 +99,7 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
             status = "SUCCESS";
         }
         dataTransformerRunBuilder.status(status);
+        dataTransformerRunBuilder.status_reason("Job ended");
         DataEntity dataEntity = dataTransformerRunBuilder.build();
         submit(dataEntity);
         registry.removeJob(jobEnd.jobId());
@@ -111,7 +113,7 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
         DataEntityBuilder dataTransformerRunBuilder = DataEntity.builder().type(DataEntity.JOB_RUN);
 
         JobInfo jobInfo = new JobInfo();
-        jobInfo.setDataTransformerBuilder(dataTransformerBuilder);
+//        jobInfo.setDataTransformerBuilder(dataTransformerBuilder);
         jobInfo.setDataTransformerRunBuilder(dataTransformerRunBuilder);
         registry.registerJob(jobStart.jobId(), jobInfo);
 

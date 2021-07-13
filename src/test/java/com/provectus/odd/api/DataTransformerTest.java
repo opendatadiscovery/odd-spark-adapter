@@ -15,17 +15,6 @@ public class DataTransformerTest {
         assertNull(dt.data_transformer.getSql());
     }
 
-//    @Test
-    public void testToString() {
-        DataEntity dt = DataEntity.builder().name("zzz").type(JOB).sql(null).build();
-        String actual = dt.toString();
-        assertEquals(
-                "DataEntity(super=BaseObject(oddrn=null, name=zzz, description=null, owner=null, type=JOB, " +
-                        "meta_data=Metadata()), dataTransformer=DataTransformer(source_code_url=null, sql=null, " +
-                        "inputs=null, outputs=null), dataTransformerRun=null)",
-                actual);
-    }
-
     @Test
     public void testStartTime() {
         DataEntityBuilder builder = DataEntity.builder();

@@ -1,7 +1,5 @@
 package com.provectus.odd.adapters.spark;
 
-import com.provectus.odd.api.BaseObject;
-import com.provectus.odd.api.DataEntity;
 import com.provectus.odd.api.EntitiesRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpResponse;
@@ -14,8 +12,8 @@ import java.io.IOException;
 
 @Slf4j
 public class OddClient {
-    private HttpClient httpClient = HttpClientBuilder.create().build();
-    private String endpoint;
+    private final HttpClient httpClient = HttpClientBuilder.create().build();
+    private final String endpoint;
 
     public OddClient(String endpoint) {
         this.endpoint = endpoint;

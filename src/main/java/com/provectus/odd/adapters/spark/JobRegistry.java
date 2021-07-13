@@ -19,8 +19,8 @@ import java.util.WeakHashMap;
 
 @Slf4j
 public class JobRegistry {
-    WeakHashMap<RDD<?>, JobInfo> rddJobMap = new WeakHashMap<>();
-    WeakHashMap<Integer, JobInfo> jobIdJobMap = new WeakHashMap<>();
+    final WeakHashMap<RDD<?>, JobInfo> rddJobMap = new WeakHashMap<>();
+    final WeakHashMap<Integer, JobInfo> jobIdJobMap = new WeakHashMap<>();
 
     /**
      * Entry point for PairRDDFunctionsTransformer

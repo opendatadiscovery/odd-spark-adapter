@@ -1,12 +1,8 @@
 package com.provectus.odd.adapters.spark.examples;
 
-import com.provectus.odd.adapters.spark.SparkListener;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.rdd.PairRDDFunctions;
-import org.apache.spark.rdd.RDD;
 import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 
