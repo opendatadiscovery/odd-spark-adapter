@@ -8,7 +8,7 @@ import java.util.List;
 @Getter
 @ToString
 public class DataTransformer {
-    String source_code_url;
+    String sourceCodeUrl;
     String sql;
     List<String> inputs;
     List<String> outputs;

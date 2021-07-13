@@ -1,6 +1,7 @@
 package com.provectus.odd.api;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.provectus.odd.api.DataEntity.JOB;
 import static com.provectus.odd.api.DataEntity.JOB_RUN;
@@ -8,21 +9,26 @@ import static com.provectus.odd.api.DataEntity.JOB_RUN;
 public class DataEntityBuilder {
     DataEntity underConstruction = new DataEntity();
 
+    public DataEntityBuilder metadata(Map<String, String> metadata) {
+        underConstruction.metadata = metadata;
+        return this;
+    }
+
     public DataEntityBuilder type(String aType) {
         underConstruction.type = aType;
         if (aType.equals(JOB)) {
-            if (underConstruction.data_transformer_run != null) {
+            if (underConstruction.dataTransformerRun != null) {
                 throw new IllegalArgumentException("Already set it to DataTranformerRun");
             }
-            if (underConstruction.data_transformer == null) {
-                underConstruction.data_transformer = new DataTransformer();
+            if (underConstruction.dataTransformer == null) {
+                underConstruction.dataTransformer = new DataTransformer();
             }
         } else if (aType.equals(JOB_RUN)) {
-            if (underConstruction.data_transformer != null) {
+            if (underConstruction.dataTransformer != null) {
                 throw new IllegalArgumentException("Already set it to DataTranformer");
             }
-            if (underConstruction.data_transformer_run == null) {
-                underConstruction.data_transformer_run = new DataTransformerRun();
+            if (underConstruction.dataTransformerRun == null) {
+                underConstruction.dataTransformerRun = new DataTransformerRun();
             }
         } else {
             throw new IllegalArgumentException("Unknown type: " + aType);
@@ -36,7 +42,7 @@ public class DataEntityBuilder {
 
     public DataEntityBuilder source_code_url(String sourceCodeUrl) {
         ensureCorrectType(JOB);
-        underConstruction.data_transformer.source_code_url = sourceCodeUrl;
+        underConstruction.dataTransformer.sourceCodeUrl = sourceCodeUrl;
         return this;
     }
 
@@ -47,7 +53,7 @@ public class DataEntityBuilder {
 
     public DataEntityBuilder sql(String aSql) {
         ensureCorrectType(JOB);
-        underConstruction.data_transformer.sql = aSql;
+        underConstruction.dataTransformer.sql = aSql;
         return this;
     }
 
@@ -68,13 +74,13 @@ public class DataEntityBuilder {
 
     public DataEntityBuilder inputs(List<String> aInputs) {
         ensureCorrectType(JOB);
-        underConstruction.data_transformer.inputs = aInputs;
+        underConstruction.dataTransformer.inputs = aInputs;
         return this;
     }
 
     public DataEntityBuilder outputs(List<String> aOutputs) {
         ensureCorrectType(JOB);
-        underConstruction.data_transformer.outputs = aOutputs;
+        underConstruction.dataTransformer.outputs = aOutputs;
         return this;
     }
 
@@ -86,31 +92,31 @@ public class DataEntityBuilder {
 
     public DataEntityBuilder status(String aStatus) {
         ensureCorrectType(JOB_RUN);
-        underConstruction.data_transformer_run.status = aStatus;
+        underConstruction.dataTransformerRun.status = aStatus;
         return this;
     }
 
     public DataEntityBuilder transformer_oddrn(String transformerOddrn) {
         ensureCorrectType(JOB_RUN);
-        underConstruction.data_transformer_run.transformer_oddrn = transformerOddrn;
+        underConstruction.dataTransformerRun.transformerOddrn = transformerOddrn;
         return this;
     }
 
     public DataEntityBuilder start_time(String aStartTime) {
         ensureCorrectType(JOB_RUN);
-        underConstruction.data_transformer_run.start_time = aStartTime;
+        underConstruction.dataTransformerRun.startTime = aStartTime;
         return this;
     }
 
     public DataEntityBuilder end_time(String aEndTime) {
         ensureCorrectType(JOB_RUN);
-        underConstruction.data_transformer_run.end_time = aEndTime;
+        underConstruction.dataTransformerRun.endTime = aEndTime;
         return this;
     }
 
     public DataEntityBuilder status_reason(String aStatusReason) {
         ensureCorrectType(JOB_RUN);
-        underConstruction.data_transformer_run.status_reason = aStatusReason;
+        underConstruction.dataTransformerRun.statusReason = aStatusReason;
         return this;
     }
 }

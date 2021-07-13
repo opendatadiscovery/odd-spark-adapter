@@ -8,20 +8,20 @@ public class DataEntity extends BaseObject {
     public static final String JOB = "JOB";
     public static final String JOB_RUN = "JOB_RUN";
 
-    DataTransformer data_transformer = null;
-    DataTransformerRun data_transformer_run = null;
+    DataTransformer dataTransformer = null;
+    DataTransformerRun dataTransformerRun = null;
 
     public static DataEntityBuilder builder() {
         return new DataEntityBuilder();
     }
 
 
-    public DataTransformer getData_transformer() {
-        return data_transformer;
+    public DataTransformer getDataTransformer() {
+        return dataTransformer;
     }
 
-    public DataTransformerRun getData_transformer_run() {
-        return data_transformer_run;
+    public DataTransformerRun getDataTransformerRun() {
+        return dataTransformerRun;
     }
 
     public DataEntity() {

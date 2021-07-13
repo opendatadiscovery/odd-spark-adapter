@@ -28,9 +28,6 @@ Further development may include:
     * etc.
 * Technical excellence improvement 
   * More unit tests
-  * Use `CamelCase` for field names for JSON-mapped fields but map to `snake_case`
-    when sending request (perhaps, having several different versions of Jackson
-    in dependencies/transitive dependencies prevents it functioning now).
 * Probably better design of `oddrn`s, ways to represent inputs/outputs etc.
   * Every time job is submitted to Spark, there is both JOB and JOB_RUN
   * Make sure data gathered is as meaningful in a long term as possible vs 

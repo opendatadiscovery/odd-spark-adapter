@@ -6,11 +6,11 @@ import lombok.ToString;
 @Getter
 @ToString
 public class DataTransformerRun {
-    String transformer_oddrn;
-    String start_time; // TODO use specific type and make sure it is serialized properly
-    String end_time; // TODO
-    String status_reason;
-    String status; // TODO enum
+    String transformerOddrn;
+    String startTime;
+    String endTime;
+    String statusReason;
+    String status;
 
     public DataTransformerRun() {
     }

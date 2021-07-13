@@ -15,6 +15,7 @@ import org.apache.spark.rdd.RDD;
 import org.apache.spark.scheduler.*;
 import org.apache.spark.sql.SparkSession;
 import scala.Option;
+import scala.Tuple2;
 
 import java.io.IOException;
 import java.net.URI;
@@ -130,7 +131,9 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
             appName = context.appName();
 
             SparkConf conf = context.getConf();
-            log.info("conf: {}", Arrays.toString(conf.getAll()));
+            Tuple2<String, String>[] metadata = conf.getAll();
+            log.info("conf: {}", Arrays.toString(metadata));
+//            dataTransformerBuilder.metadata();
             log.info("appName: {}", appName);
             String sourceCodeUrl = conf.get("spark.app.initial.jar.urls", null);
             log.info("sourceCodeUrl: {}", sourceCodeUrl);

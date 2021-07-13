@@ -1,5 +1,8 @@
 package com.provectus.odd.adapters.spark;
 
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.spark.Dependency;
 import org.apache.spark.rdd.RDD;
 import org.apache.spark.scheduler.ActiveJob;
@@ -35,6 +38,12 @@ public class Utils {
             .append(DateTimeFormatter.ISO_LOCAL_TIME)
             .append(DateTimeFormatter.ofPattern("Z"))
             .toFormatter(Locale.getDefault());
+
+    private static final Gson gson = new GsonBuilder()
+            .serializeNulls()
+            .setPrettyPrinting()
+            .setFieldNamingStrategy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .create();
 
     public static Set<RDD<?>> flattenRDDs(RDD<?> rdd) {
         Set<RDD<?>> rdds = new HashSet<>();
@@ -72,6 +81,10 @@ public class Utils {
     }
 
     static String toJsonString(Object o) {
+        return gson.toJson(o);
+    }
+
+    static String toJsonStringJackson(Object o) {
         String json;
         try {
             json = jacksonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(o);
