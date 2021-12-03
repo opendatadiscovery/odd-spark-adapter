@@ -3,8 +3,6 @@ package com.provectus.odd.adapters.spark;
 import com.provectus.odd.adapters.spark.mapper.DataEntityMapper;
 import com.provectus.odd.adapters.spark.mapper.DataTransformerMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.SparkConf;
-import org.apache.spark.SparkEnv;
 import org.apache.spark.SparkEnv$;
 
 
@@ -13,7 +11,6 @@ import org.apache.spark.scheduler.SparkListenerApplicationEnd;
 import org.apache.spark.scheduler.SparkListener;
 import org.apache.spark.scheduler.SparkListenerJobEnd;
 import org.apache.spark.scheduler.SparkListenerJobStart;
-import org.apache.spark.scheduler.JobResult;
 import org.apache.spark.scheduler.JobFailed;
 import org.apache.spark.scheduler.SparkListenerEvent;
 
@@ -21,9 +18,7 @@ import org.apache.spark.sql.SQLContext;
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.UnaryNode;
-import org.apache.spark.sql.execution.QueryExecution;
 import org.apache.spark.sql.execution.SQLExecution;
-import org.apache.spark.sql.execution.SparkPlan;
 import org.apache.spark.sql.execution.datasources.HadoopFsRelation;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
@@ -37,7 +32,6 @@ import org.opendatadiscovery.client.model.DataTransformer;
 import org.opendatadiscovery.client.model.DataTransformerRun;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import reactor.core.publisher.Mono;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -66,9 +60,9 @@ public class OddAdapterSparkListener extends SparkListener {
     @Override
     public void onApplicationStart(SparkListenerApplicationStart applicationStart) {
         log.info("onApplicationStart: {}", applicationStart);
-        SparkEnv sparkEnv = SparkEnv$.MODULE$.get();
-        SparkConf conf = sparkEnv.conf();
-        String endpoint = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY, null);
+        var sparkEnv = SparkEnv$.MODULE$.get();
+        var conf = sparkEnv.conf();
+        var endpoint = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY, null);
         if (endpoint != null) {
             log.info("Setting {} ODD host", endpoint);
             client = new OpenDataDiscoveryIngestionApi();
@@ -81,12 +75,9 @@ public class OddAdapterSparkListener extends SparkListener {
     @Override
     public void onApplicationEnd(SparkListenerApplicationEnd applicationEnd) {
         log.info("onApplicationEnd: {} jobsCount {}", applicationEnd, jobCount);
-        dataEntity.setDataTransformer(dataTransformerAcc);
-        var dataEntityList = new DataEntityList()
-                .dataSourceOddrn(dataEntity.getDataTransformerRun().getTransformerOddrn())
-                .addItemsItem(dataEntity);
+        var dataEntityList = dataEntityList();
         log.info("{}", dataEntityList);
-        Mono<ResponseEntity<Void>> res = client.postDataEntityListWithHttpInfo(dataEntityList);
+        var res = client.postDataEntityListWithHttpInfo(dataEntityList);
         log.info("Response {}", res.blockOptional()
                 .map(ResponseEntity::getStatusCode)
                 .map(HttpStatus::getReasonPhrase)
@@ -95,7 +86,7 @@ public class OddAdapterSparkListener extends SparkListener {
 
     @Override
     public void onJobEnd(SparkListenerJobEnd jobEnd) {
-        JobResult jobResult = jobEnd.jobResult();
+        var jobResult = jobEnd.jobResult();
         var dataTransformerRun = dataEntity.getDataTransformerRun();
         if (jobResult instanceof JobFailed) {
             dataTransformerRun.setStatus(DataTransformerRun.StatusEnum.FAILED);
@@ -135,21 +126,28 @@ public class OddAdapterSparkListener extends SparkListener {
         }
     }
 
+    private DataEntityList dataEntityList() {
+        return new DataEntityList()
+                .dataSourceOddrn(dataEntity.getOddrn())
+                .addItemsItem(dataEntityMapper.map(dataEntity).dataTransformer(dataTransformerAcc))
+                .addItemsItem(dataEntity);
+    }
+
     /**
      * called by the SparkListener when a spark-sql (Dataset api) execution starts
      */
     private DataTransformer sparkSQLExecStart(SparkListenerSQLExecutionStart startEvent) {
         log.info("sparkSQLExecStart {}", startEvent);
-        QueryExecution queryExecution = SQLExecution.getQueryExecution(startEvent.executionId());
+        var queryExecution = SQLExecution.getQueryExecution(startEvent.executionId());
 
-        SparkPlan sparkPlan = queryExecution.sparkPlan();
+        var sparkPlan = queryExecution.sparkPlan();
         //log.info("sparkPlan {}", sparkPlan.prettyJson());
-        LogicalPlan logicalPlan = queryExecution.logical();
+        var logicalPlan = queryExecution.logical();
 
         if (logicalPlan instanceof SaveIntoDataSourceCommand) {
             return handleSaveIntoDataSourceCommand(logicalPlan, sparkPlan.sqlContext());
         }
-        LogicalRelation logRel = findLogicalRelation(logicalPlan);
+        var logRel = findLogicalRelation(logicalPlan);
 
         if (logRel.relation() instanceof JDBCRelation) {
             return handleJdbcRelation(logRel);

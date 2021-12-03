@@ -16,6 +16,12 @@ import static java.time.ZoneOffset.UTC;
 
 public class DataEntityMapper {
 
+    public DataEntity map(DataEntity dataEntity) {
+        return new DataEntity()
+                .type(DataEntityType.JOB)
+                .oddrn(dataEntity.getDataTransformerRun().getTransformerOddrn());
+    }
+
     public DataEntity map(SparkListenerJobStart jobStart) {
         var properties = jobStart.properties();
         var job = properties.getProperty("spark.app.name");
@@ -23,18 +29,18 @@ public class DataEntityMapper {
         var run = properties.getProperty("spark.app.id");
         try {
             return new DataEntity()
-                    .type(DataEntityType.JOB)
+                    .type(DataEntityType.JOB_RUN)
                     .oddrn(new Generator().generate(SparkPath.builder()
                             .host(host)
                             .job(job)
-                            .build(), "job"))
+                            .run(run)
+                            .build(), "run"))
                     .dataTransformerRun(new DataTransformerRun()
                             .startTime(OffsetDateTime.ofInstant(Instant.ofEpochMilli(jobStart.time()), UTC))
                             .transformerOddrn(new Generator().generate(SparkPath.builder()
                                             .host(host)
                                             .job(job)
-                                            .run(run)
-                                            .build(), "run")));
+                                            .build(), "job")));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
