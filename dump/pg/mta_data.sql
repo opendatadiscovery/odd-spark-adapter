@@ -1,0 +1,1 @@
+CREATE DATABASE mta_data;
