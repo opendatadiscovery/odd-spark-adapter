@@ -1,12 +1,21 @@
 package com.provectus.odd.adapters.spark;
 
 import com.provectus.odd.adapters.spark.mapper.DataEntityMapper;
+import com.provectus.odd.adapters.spark.mapper.DataTransformerMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkEnv;
 import org.apache.spark.SparkEnv$;
 
-import org.apache.spark.scheduler.*;
+
+import org.apache.spark.scheduler.SparkListenerApplicationStart;
+import org.apache.spark.scheduler.SparkListenerApplicationEnd;
+import org.apache.spark.scheduler.SparkListener;
+import org.apache.spark.scheduler.SparkListenerJobEnd;
+import org.apache.spark.scheduler.SparkListenerJobStart;
+import org.apache.spark.scheduler.JobResult;
+import org.apache.spark.scheduler.JobFailed;
+import org.apache.spark.scheduler.SparkListenerEvent;
 
 import org.apache.spark.sql.SQLContext;
 
@@ -21,19 +30,21 @@ import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
 import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionEnd;
 import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart;
-import org.apache.spark.sql.sources.BaseRelation;
-import org.apache.spark.sql.sources.RelationProvider;
-import org.apache.spark.sql.sources.SchemaRelationProvider;
 import org.opendatadiscovery.client.api.OpenDataDiscoveryIngestionApi;
 import org.opendatadiscovery.client.model.DataEntity;
 import org.opendatadiscovery.client.model.DataEntityList;
+import org.opendatadiscovery.client.model.DataTransformer;
+import org.opendatadiscovery.client.model.DataTransformerRun;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import reactor.core.publisher.Mono;
-import scala.Option;
+
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.util.Optional;
 
 import static com.provectus.odd.adapters.spark.utils.ScalaConversionUtils.findSparkConfigKey;
-import static com.provectus.odd.adapters.spark.utils.Utils.sanitizeJdbcUrl;
+import static java.time.ZoneOffset.UTC;
 
 
 @Slf4j
@@ -42,7 +53,13 @@ public class OddAdapterSparkListener extends SparkListener {
 
     private OpenDataDiscoveryIngestionApi client;
 
-    private final DataEntityMapper dataEntityMapper = DataEntityMapper.INSTANCE;
+    private final DataTransformerMapper dataTransformerMapper = new DataTransformerMapper();
+
+    private final DataEntityMapper dataEntityMapper = new DataEntityMapper();
+
+    private final DataTransformer dataTransformerAcc = new DataTransformer();
+
+    private DataEntity dataEntity = null;
 
     private int jobCount = 0;
 
@@ -64,35 +81,55 @@ public class OddAdapterSparkListener extends SparkListener {
     @Override
     public void onApplicationEnd(SparkListenerApplicationEnd applicationEnd) {
         log.info("onApplicationEnd: {} jobsCount {}", applicationEnd, jobCount);
+        dataEntity.setDataTransformer(dataTransformerAcc);
+        var dataEntityList = new DataEntityList()
+                .dataSourceOddrn(dataEntity.getDataTransformerRun().getTransformerOddrn())
+                .addItemsItem(dataEntity);
+        log.info("{}", dataEntityList);
+        Mono<ResponseEntity<Void>> res = client.postDataEntityListWithHttpInfo(dataEntityList);
+        log.info("Response {}", res.blockOptional()
+                .map(ResponseEntity::getStatusCode)
+                .map(HttpStatus::getReasonPhrase)
+                .orElse("<EMPTY>"));
     }
 
     @Override
     public void onJobEnd(SparkListenerJobEnd jobEnd) {
         JobResult jobResult = jobEnd.jobResult();
-        String status;
+        var dataTransformerRun = dataEntity.getDataTransformerRun();
         if (jobResult instanceof JobFailed) {
-            status = "FAIL";
+            dataTransformerRun.setStatus(DataTransformerRun.StatusEnum.FAILED);
+            dataTransformerRun
+                    .statusReason(Optional
+                            .ofNullable(((JobFailed)jobResult).exception())
+                            .map(Throwable::getMessage).orElse(""));
         } else {
-            status = "SUCCESS";
+            if (dataTransformerRun.getStatus() == null) {
+                dataTransformerRun.setStatus(DataTransformerRun.StatusEnum.SUCCESS);
+            }
         }
-        log.info("onJobEnd {} status {}", jobEnd, status);
+        dataTransformerRun.setEndTime(OffsetDateTime.ofInstant(Instant.ofEpochMilli(jobEnd.time()), UTC));
+        log.info("onJobEnd {}", jobEnd);
     }
 
     @Override
     public void onJobStart(SparkListenerJobStart jobStart) {
         jobCount += 1;
         log.info("onJobStart#{} {}", jobCount, jobStart.properties());
+        if (dataEntity == null) {
+            dataEntity = dataEntityMapper.map(jobStart);
+        }
     }
 
     @Override
     public void onOtherEvent(SparkListenerEvent event) {
         if (event instanceof SparkListenerSQLExecutionStart) {
-            DataEntityList dataEntityList = sparkSQLExecStart((SparkListenerSQLExecutionStart) event);
-            Mono<ResponseEntity<Void>> res = client.postDataEntityListWithHttpInfo(dataEntityList);
-            log.info("Response {}", res.blockOptional()
-                    .map(ResponseEntity::getStatusCode)
-                    .map(HttpStatus::getReasonPhrase)
-                    .orElse("<EMPTY>"));
+            var dataTransformer = sparkSQLExecStart((SparkListenerSQLExecutionStart) event);
+            if (dataTransformer.getInputs().isEmpty()) {
+                dataTransformerAcc.getOutputs().addAll(dataTransformer.getOutputs());
+            } else {
+                dataTransformerAcc.getInputs().addAll(dataTransformer.getInputs());
+            }
         } else if (event instanceof SparkListenerSQLExecutionEnd) {
             sparkSQLExecEnd((SparkListenerSQLExecutionEnd) event);
         }
@@ -101,7 +138,7 @@ public class OddAdapterSparkListener extends SparkListener {
     /**
      * called by the SparkListener when a spark-sql (Dataset api) execution starts
      */
-    private DataEntityList sparkSQLExecStart(SparkListenerSQLExecutionStart startEvent) {
+    private DataTransformer sparkSQLExecStart(SparkListenerSQLExecutionStart startEvent) {
         log.info("sparkSQLExecStart {}", startEvent);
         QueryExecution queryExecution = SQLExecution.getQueryExecution(startEvent.executionId());
 
@@ -140,47 +177,23 @@ public class OddAdapterSparkListener extends SparkListener {
         log.info("sparkSQLExecEnd {}", endEvent);
     }
 
-    private DataEntityList handleSaveIntoDataSourceCommand(LogicalPlan logicalPlan, SQLContext sqlContext) {
-        SaveIntoDataSourceCommand command = (SaveIntoDataSourceCommand) logicalPlan;
-        BaseRelation relation;
-        if (command.dataSource() instanceof RelationProvider) {
-            RelationProvider p = (RelationProvider) command.dataSource();
-            relation = p.createRelation(sqlContext, command.options());
-        } else {
-            SchemaRelationProvider p = (SchemaRelationProvider) command.dataSource();
-            relation = p.createRelation(sqlContext, command.options(), logicalPlan.schema());
-        }
-        LogicalRelation logicalRelation = new LogicalRelation(relation, relation.schema().toAttributes(), Option.empty(),
-                logicalPlan.isStreaming());
-
-        DataEntity dataEntity = dataEntityMapper.map(logicalRelation)
-                .name(command.options().get("dbtable").get());
-        DataEntityList dataEntityList = new DataEntityList()
-                //TODO replace w oddrn
-                .dataSourceOddrn(sanitizeJdbcUrl(command.options().get("url").get()))
-                .addItemsItem(dataEntity);
-        log.info("{}", dataEntityList);
-        return dataEntityList;
+    private DataTransformer handleSaveIntoDataSourceCommand(LogicalPlan logicalPlan, SQLContext sqlContext) {
+        var command = (SaveIntoDataSourceCommand) logicalPlan;
+        return dataTransformerMapper.map(command);
     }
 
-    private DataEntityList handleHadoopFsRelation(LogicalRelation logicalRelation) {
+    private DataTransformer handleHadoopFsRelation(LogicalRelation logicalRelation) {
         log.info("TODO: handleHadoopFsRelation");
-        return new DataEntityList();
+        return new DataTransformer();
     }
 
-    private DataEntityList handleCatalogTable(LogicalRelation logicalRelation) {
+    private DataTransformer handleCatalogTable(LogicalRelation logicalRelation) {
         log.info("TODO: handleCatalogTable");
-        return new DataEntityList();
+        return new DataTransformer();
     }
 
-    private DataEntityList handleJdbcRelation(LogicalRelation logicalRelation) {
+    private DataTransformer handleJdbcRelation(LogicalRelation logicalRelation) {
         var relation = (JDBCRelation) logicalRelation.relation();
-        DataEntity dataEntity = dataEntityMapper.map(relation);
-        DataEntityList dataEntityList = new DataEntityList()
-                //TODO replace w oddrn
-                .dataSourceOddrn(sanitizeJdbcUrl(relation.jdbcOptions().url()))
-                .addItemsItem(dataEntity);
-        log.info("{}", dataEntityList);
-        return dataEntityList;
+        return dataTransformerMapper.map(relation);
     }
 }

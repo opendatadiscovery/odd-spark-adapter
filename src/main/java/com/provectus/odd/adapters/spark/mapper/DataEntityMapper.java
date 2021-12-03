@@ -1,48 +1,42 @@
 package com.provectus.odd.adapters.spark.mapper;
 
-import org.apache.spark.sql.execution.datasources.LogicalRelation;
-import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions;
-import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
+import org.apache.spark.scheduler.SparkListenerJobStart;
+
 import org.opendatadiscovery.client.model.DataEntity;
+
 import org.opendatadiscovery.client.model.DataEntityType;
-import scala.runtime.AbstractFunction0;
+import org.opendatadiscovery.client.model.DataTransformerRun;
+import org.opendatadiscovery.oddrn.Generator;
+import org.opendatadiscovery.oddrn.model.SparkPath;
+
+import java.time.Instant;
+import java.time.OffsetDateTime;
+
+import static java.time.ZoneOffset.UTC;
 
 public class DataEntityMapper {
 
-    public static DataEntityMapper INSTANCE = new DataEntityMapper();
-
-    private final DataSetMapper dataSetMapper = DataSetMapper.INSTANCE;
-
-    private DataEntityMapper() {
-    }
-
-    public DataEntity map(LogicalRelation logicalRelation) {
-        return new DataEntity()
-                .oddrn("/write")
-                .type(DataEntityType.TABLE)
-                .dataset(dataSetMapper.map(logicalRelation));
-    }
-
-    public DataEntity map(JDBCRelation relation) {
-        // TODO- if a relation is composed of a complex sql query, we should attempt to
-        // extract the
-        // table names so that we can construct a true lineage
-        String tableName =
-                relation
-                        .jdbcOptions()
-                        .parameters()
-                        .get(JDBCOptions.JDBC_TABLE_NAME())
-                        .getOrElse(
-                                new AbstractFunction0<String>() {
-                                    @Override
-                                    public String apply() {
-                                        return "COMPLEX";
-                                    }
-                                });
-        return new DataEntity()
-                .oddrn("/read")
-                .type(DataEntityType.TABLE)
-                .name(tableName)
-                .dataset(dataSetMapper.map(relation.schema()));
+    public DataEntity map(SparkListenerJobStart jobStart) {
+        var properties = jobStart.properties();
+        var job = properties.getProperty("spark.app.name");
+        var host = properties.getProperty("spark.master").split("://")[1];
+        var run = properties.getProperty("spark.app.id");
+        try {
+            return new DataEntity()
+                    .type(DataEntityType.JOB)
+                    .oddrn(new Generator().generate(SparkPath.builder()
+                            .host(host)
+                            .job(job)
+                            .build(), "job"))
+                    .dataTransformerRun(new DataTransformerRun()
+                            .startTime(OffsetDateTime.ofInstant(Instant.ofEpochMilli(jobStart.time()), UTC))
+                            .transformerOddrn(new Generator().generate(SparkPath.builder()
+                                            .host(host)
+                                            .job(job)
+                                            .run(run)
+                                            .build(), "run")));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
