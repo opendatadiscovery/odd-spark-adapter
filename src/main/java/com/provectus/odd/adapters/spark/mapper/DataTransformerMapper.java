@@ -44,7 +44,7 @@ public class DataTransformerMapper {
                 .outputs(Collections.singletonList(generate(url, tableName)));
     }
 
-    private String generate(String url, String dbtable) {
+    private String generate(String url, String tableName) {
         try {
             var split = url.split("://");
             var tokens = split[1].split("/");
@@ -53,19 +53,19 @@ public class DataTransformerMapper {
                     return new Generator().generate(MysqlPath.builder()
                             .host(tokens[0])
                             .database(tokens[1])
-                            .table(dbtable)
+                            .table(tableName)
                             .build(), "table");
                 case "postgresql" :
                     return new Generator().generate(PostgreSqlPath.builder()
                             .host(tokens[0])
-                            .database(tokens[0])
+                            .database(tokens[1])
                             .schema("public")
-                            .table(dbtable)
+                            .table(tableName)
                             .build(), "table");
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        return "<UNKNOWN>";
+        return "!" + url + "/" + tableName;
     }
 }
