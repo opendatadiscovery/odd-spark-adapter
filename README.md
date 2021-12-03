@@ -25,11 +25,7 @@ Further development may include:
     * from Scala, from Python, from Java
     * etc.
 * Technical excellence improvement 
-  * More unit tests
-* Probably better design of `oddrn`s, ways to represent inputs/outputs etc.
-  * Every time job is submitted to Spark, there is both JOB and JOB_RUN
-  * Make sure data gathered is as meaningful in a long term as possible vs 
-    only meaningful in a short time after when job is run  
+  * Unit tests
 
 # Development
 
