@@ -14,6 +14,7 @@ Further development may include:
 * Features
   * Support for capturing meaningful information for more inputs/outputs 
     types Spark has support for, e.g.:
+    * Kafka
     * HBase
     * Hudi tables
     * etc.

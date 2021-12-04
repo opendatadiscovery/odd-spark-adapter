@@ -64,7 +64,7 @@ public class OddAdapterSparkListener extends SparkListener {
         var conf = sparkEnv.conf();
         var endpoint = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY, null);
         if (endpoint != null) {
-            log.info("Setting {} ODD host", endpoint);
+            log.info("Setting ODD host {}", endpoint);
             client = new OpenDataDiscoveryIngestionApi();
             client.getApiClient().setBasePath(endpoint);
         } else {

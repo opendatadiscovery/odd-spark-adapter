@@ -14,8 +14,10 @@ import java.util.Collections;
 
 import static com.provectus.odd.adapters.spark.utils.Utils.sanitizeJdbcUrl;
 
-@Slf4j
 public class DataTransformerMapper {
+
+    public static final String URL = "url";
+    public static final String DBTABLE = "dbtable";
 
     public DataTransformer map(JDBCRelation relation) {
         // TODO- if a relation is composed of a complex sql query, we should attempt to
@@ -27,7 +29,7 @@ public class DataTransformerMapper {
                         .parameters()
                         .get(JDBCOptions.JDBC_TABLE_NAME())
                         .getOrElse(
-                                new AbstractFunction0<String>() {
+                                new AbstractFunction0<>() {
                                     @Override
                                     public String apply() {
                                         return "COMPLEX";
@@ -38,8 +40,8 @@ public class DataTransformerMapper {
     }
 
     public DataTransformer map(SaveIntoDataSourceCommand command) {
-        var url = sanitizeJdbcUrl(command.options().get("url").get());
-        var tableName = command.options().get("dbtable").get();
+        var url = sanitizeJdbcUrl(command.options().get(URL).get());
+        var tableName = command.options().get(DBTABLE).get();
         return new DataTransformer()
                 .outputs(Collections.singletonList(generate(url, tableName)));
     }
