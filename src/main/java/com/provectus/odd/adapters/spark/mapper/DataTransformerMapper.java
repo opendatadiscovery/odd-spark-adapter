@@ -1,6 +1,5 @@
 package com.provectus.odd.adapters.spark.mapper;
 
-import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions;
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
