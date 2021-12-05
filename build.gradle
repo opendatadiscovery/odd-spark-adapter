@@ -22,8 +22,11 @@ ext {
 
 dependencies {
     implementation "org.springframework.boot:spring-boot-starter-webflux:2.5.0"
+    implementation "com.google.cloud.spark:spark-bigquery_2.12:0.21.1"
+    implementation "com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.21.1"
     implementation "org.apache.spark:spark-core_2.12:${sparkVersion}"
     implementation "org.apache.spark:spark-sql_2.12:${sparkVersion}"
+    implementation "org.apache.spark:spark-hive_2.12:${sparkVersion}"
     extraLibs group: 'org.opendatadiscovery', name: 'oddrn-generator-java', version: '0.1.3'
     extraLibs group: 'org.opendatadiscovery', name: 'ingestion-contract-client', version: '0.1.4'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
@@ -39,4 +42,11 @@ jar {
     from {
         configurations.extraLibs.collect { it.isDirectory() ? it : zipTree(it) }
     }
+    manifest {
+        attributes(
+                "Premain-Class": 'com.provectus.odd.adapters.spark.SparkAgent',
+                "Agent-Class": 'com.provectus.odd.adapters.spark.SparkAgent'
+        )
+    }
+    zip64 true
 }

@@ -8,7 +8,9 @@ import org.opendatadiscovery.client.model.DataEntityType;
 import java.time.Instant;
 import java.util.Properties;
 
-import static com.provectus.odd.adapters.spark.mapper.DataEntityMapper.*;
+import static com.provectus.odd.adapters.spark.mapper.DataEntityMapper.SPARK_APP_NAME;
+import static com.provectus.odd.adapters.spark.mapper.DataEntityMapper.SPARK_MASTER;
+import static com.provectus.odd.adapters.spark.mapper.DataEntityMapper.SPARK_APP_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
@@ -19,7 +21,7 @@ public class DataEntityMapperTest {
     @Test
     public void jobDateEntityMapperTest() {
         var jobRunDataEntity = mockSparkListenerJobStart();
-        var jobDataEntity = new DataEntityMapper().map(jobRunDataEntity);
+        var jobDataEntity = DataEntityMapper.map(jobRunDataEntity);
         assertEquals(DataEntityType.JOB, jobDataEntity.getType());
         assertEquals("//spark/host/spark-master:7077/jobs/etl-app",
                 jobDataEntity.getOddrn());
@@ -43,6 +45,6 @@ public class DataEntityMapperTest {
         when(jobStart.properties().getProperty(SPARK_MASTER)).thenReturn("spark://spark-master:7077");
         when(jobStart.properties().getProperty(SPARK_APP_NAME)).thenReturn("etl-app");
         when(jobStart.properties().getProperty(SPARK_APP_ID)).thenReturn("app-20211204075250-0013");
-        return new DataEntityMapper().map(jobStart);
+        return DataEntityMapper.map(jobStart);
     }
 }

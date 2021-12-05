@@ -1,8 +1,10 @@
 package com.provectus.odd.adapters.spark;
 
 import com.provectus.odd.adapters.spark.mapper.DataEntityMapper;
-import com.provectus.odd.adapters.spark.mapper.DataTransformerMapper;
+import com.provectus.odd.adapters.spark.plan.QueryPlanVisitor;
+import com.provectus.odd.adapters.spark.utils.ScalaConversionUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.SparkContext$;
 import org.apache.spark.SparkEnv$;
 
 
@@ -14,27 +16,22 @@ import org.apache.spark.scheduler.SparkListenerJobStart;
 import org.apache.spark.scheduler.JobFailed;
 import org.apache.spark.scheduler.SparkListenerEvent;
 
-import org.apache.spark.sql.SQLContext;
-
+import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
-import org.apache.spark.sql.catalyst.plans.logical.UnaryNode;
 import org.apache.spark.sql.execution.SQLExecution;
-import org.apache.spark.sql.execution.datasources.HadoopFsRelation;
-import org.apache.spark.sql.execution.datasources.LogicalRelation;
-import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
-import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
 import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionEnd;
 import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart;
 import org.opendatadiscovery.client.api.OpenDataDiscoveryIngestionApi;
 import org.opendatadiscovery.client.model.DataEntity;
-import org.opendatadiscovery.client.model.DataEntityList;
-import org.opendatadiscovery.client.model.DataTransformer;
 import org.opendatadiscovery.client.model.DataTransformerRun;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static com.provectus.odd.adapters.spark.utils.ScalaConversionUtils.findSparkConfigKey;
@@ -44,14 +41,13 @@ import static java.time.ZoneOffset.UTC;
 @Slf4j
 public class OddAdapterSparkListener extends SparkListener {
     public static final String ODD_HOST_CONFIG_KEY = "odd.host.url";
+    public static final String SPARK_SQL_EXECUTION_ID = "spark.sql.execution.id";
 
     private OpenDataDiscoveryIngestionApi client;
 
-    private final DataTransformerMapper dataTransformerMapper = new DataTransformerMapper();
+    private final List<DataEntity> inputs = Collections.synchronizedList(new ArrayList<>());
 
-    private final DataEntityMapper dataEntityMapper = new DataEntityMapper();
-
-    private final DataTransformer dataTransformerAcc = new DataTransformer();
+    private final List<DataEntity> outputs = Collections.synchronizedList(new ArrayList<>());
 
     private DataEntity dataEntity = null;
 
@@ -75,13 +71,13 @@ public class OddAdapterSparkListener extends SparkListener {
     @Override
     public void onApplicationEnd(SparkListenerApplicationEnd applicationEnd) {
         log.info("onApplicationEnd: {} jobsCount {}", applicationEnd, jobCount);
-        var dataEntityList = dataEntityList();
+        var dataEntityList = DataEntityMapper.map(dataEntity, inputs, outputs);
         log.info("{}", dataEntityList);
         var res = client.postDataEntityListWithHttpInfo(dataEntityList);
         log.info("Response {}", res.blockOptional()
                 .map(ResponseEntity::getStatusCode)
                 .map(HttpStatus::getReasonPhrase)
-                .orElse("<EMPTY>"));
+                .orElse(""));
     }
 
     @Override
@@ -108,64 +104,65 @@ public class OddAdapterSparkListener extends SparkListener {
         jobCount += 1;
         log.info("onJobStart#{} {}", jobCount, jobStart.properties());
         if (dataEntity == null) {
-            dataEntity = dataEntityMapper.map(jobStart);
+            dataEntity = DataEntityMapper.map(jobStart);
         }
+        ScalaConversionUtils.asJavaOptional(
+                SparkSession.getActiveSession()
+                        .map(ScalaConversionUtils.toScalaFn(SparkSession::sparkContext))
+                        .orElse(ScalaConversionUtils.toScalaFn(() -> SparkContext$.MODULE$.getActive())))
+                .flatMap(
+                        ctx ->
+                                ScalaConversionUtils.asJavaOptional(
+                                        ctx.dagScheduler().jobIdToActiveJob().get(jobStart.jobId())))
+                .ifPresent(
+                        job -> {
+                            String executionIdProp = job.properties().getProperty(SPARK_SQL_EXECUTION_ID);
+                            if (executionIdProp != null) {
+                                long executionId = Long.parseLong(executionIdProp);
+                                log.info("{}: {}", SPARK_SQL_EXECUTION_ID, executionId);
+                            } else {
+                                log.info("RDD jobId={}", job.jobId());
+                                //TODO RDD job handling
+                            }
+                        });
     }
 
     @Override
     public void onOtherEvent(SparkListenerEvent event) {
         if (event instanceof SparkListenerSQLExecutionStart) {
-            var dataTransformer = sparkSQLExecStart((SparkListenerSQLExecutionStart) event);
-            if (dataTransformer.getInputs().isEmpty()) {
-                dataTransformerAcc.getOutputs().addAll(dataTransformer.getOutputs());
-            } else {
-                dataTransformerAcc.getInputs().addAll(dataTransformer.getInputs());
-            }
+            var startEvent = (SparkListenerSQLExecutionStart) event;
+            log.info("sparkSQLExecStart {}", startEvent);
+            sparkSQLExecStart(startEvent.executionId());
         } else if (event instanceof SparkListenerSQLExecutionEnd) {
             sparkSQLExecEnd((SparkListenerSQLExecutionEnd) event);
         }
     }
 
-    private DataEntityList dataEntityList() {
-        return new DataEntityList()
-                .dataSourceOddrn(dataEntity.getOddrn())
-                .addItemsItem(dataEntityMapper.map(dataEntity).dataTransformer(dataTransformerAcc))
-                .addItemsItem(dataEntity);
-    }
-
     /**
      * called by the SparkListener when a spark-sql (Dataset api) execution starts
      */
-    private DataTransformer sparkSQLExecStart(SparkListenerSQLExecutionStart startEvent) {
-        log.info("sparkSQLExecStart {}", startEvent);
-        var queryExecution = SQLExecution.getQueryExecution(startEvent.executionId());
-
+    private void sparkSQLExecStart(long executionId) {
+        var queryExecution = SQLExecution.getQueryExecution(executionId);
         var sparkPlan = queryExecution.sparkPlan();
         //log.info("sparkPlan {}", sparkPlan.prettyJson());
         var logicalPlan = queryExecution.logical();
-
-        if (logicalPlan instanceof SaveIntoDataSourceCommand) {
-            return handleSaveIntoDataSourceCommand(logicalPlan, sparkPlan.sqlContext());
+        var visitorFactory = VisitorFactoryProvider.getInstance(queryExecution.sparkSession());
+        var inputs = apply(visitorFactory.getInputVisitors(sparkPlan.sqlContext()), logicalPlan);
+        if (inputs.isEmpty()) {
+            var outputs = apply(visitorFactory.getOutputVisitors(sparkPlan.sqlContext()), logicalPlan);
+            this.outputs.addAll(outputs);
+        } else {
+            this.inputs.addAll(inputs);
         }
-        var logRel = findLogicalRelation(logicalPlan);
-
-        if (logRel.relation() instanceof JDBCRelation) {
-            return handleJdbcRelation(logRel);
-        } else if (logRel.relation() instanceof HadoopFsRelation) {
-            return handleHadoopFsRelation(logRel);
-        } else if (logRel.catalogTable().isDefined()) {
-            return handleCatalogTable(logRel);
-        }
-        throw new IllegalArgumentException(
-                "Expected logical plan to be either HadoopFsRelation, JDBCRelation, or CatalogTable but was "
-                        + logicalPlan);
     }
 
-    private LogicalRelation findLogicalRelation(LogicalPlan logicalPlan) {
-        if (logicalPlan instanceof LogicalRelation) {
-            return (LogicalRelation) logicalPlan;
-        }
-        return findLogicalRelation(((UnaryNode) logicalPlan).child());
+    private List<DataEntity> apply(List<QueryPlanVisitor<? extends LogicalPlan, DataEntity>> visitors,
+                                   LogicalPlan logicalPlan) {
+        return visitors.stream()
+                .filter(v -> v.isDefinedAt(logicalPlan))
+                .map(v -> v.apply(logicalPlan))
+                .findFirst()
+                .orElse(Collections.emptyList());
     }
 
     /**
@@ -173,25 +170,5 @@ public class OddAdapterSparkListener extends SparkListener {
      */
     private void sparkSQLExecEnd(SparkListenerSQLExecutionEnd endEvent) {
         log.info("sparkSQLExecEnd {}", endEvent);
-    }
-
-    private DataTransformer handleSaveIntoDataSourceCommand(LogicalPlan logicalPlan, SQLContext sqlContext) {
-        var command = (SaveIntoDataSourceCommand) logicalPlan;
-        return dataTransformerMapper.map(command);
-    }
-
-    private DataTransformer handleHadoopFsRelation(LogicalRelation logicalRelation) {
-        log.info("TODO: handleHadoopFsRelation");
-        return new DataTransformer();
-    }
-
-    private DataTransformer handleCatalogTable(LogicalRelation logicalRelation) {
-        log.info("TODO: handleCatalogTable");
-        return new DataTransformer();
-    }
-
-    private DataTransformer handleJdbcRelation(LogicalRelation logicalRelation) {
-        var relation = (JDBCRelation) logicalRelation.relation();
-        return dataTransformerMapper.map(relation);
     }
 }
