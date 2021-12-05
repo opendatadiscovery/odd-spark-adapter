@@ -42,11 +42,4 @@ jar {
     from {
         configurations.extraLibs.collect { it.isDirectory() ? it : zipTree(it) }
     }
-    manifest {
-        attributes(
-                "Premain-Class": 'com.provectus.odd.adapters.spark.SparkAgent',
-                "Agent-Class": 'com.provectus.odd.adapters.spark.SparkAgent'
-        )
-    }
-    zip64 true
 }
