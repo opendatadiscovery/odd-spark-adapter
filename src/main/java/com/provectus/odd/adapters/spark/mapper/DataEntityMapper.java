@@ -30,7 +30,7 @@ public class DataEntityMapper {
 
     public static DataEntityList map(DataEntity dataEntity, List<DataEntity> inputs, List<DataEntity> outputs) {
         return new DataEntityList()
-                .dataSourceOddrn(dataEntity.getOddrn())
+                .dataSourceOddrn(dataEntity.getOddrn().split("/jobs")[0])
                 .addItemsItem(DataEntityMapper
                         .map(dataEntity)
                         .dataTransformer(
@@ -54,6 +54,7 @@ public class DataEntityMapper {
 
     public static DataEntity map(DataEntity dataEntity) {
         return new DataEntity()
+                .name(dataEntity.getDataTransformerRun().getTransformerOddrn().split("jobs/")[1])
                 .type(DataEntityType.JOB)
                 .oddrn(dataEntity.getDataTransformerRun().getTransformerOddrn());
     }
@@ -61,11 +62,11 @@ public class DataEntityMapper {
     public static DataEntity map(SparkListenerJobStart jobStart) {
         var properties = jobStart.properties();
         var job = properties.getProperty(SPARK_APP_NAME);
-        var host = properties.getProperty(SPARK_MASTER).split("://")[1];
+        var host = properties.getProperty(SPARK_MASTER).split("://")[1].split(":")[0];
         var run = properties.getProperty(SPARK_APP_ID);
         try {
             return new DataEntity()
-
+                    .name(run)
                     .type(DataEntityType.JOB_RUN)
                     .oddrn(new Generator().generate(SparkPath.builder()
                             .host(host)

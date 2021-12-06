@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 import static com.provectus.odd.adapters.spark.utils.Utils.fileGenerator;
 import static com.provectus.odd.adapters.spark.utils.Utils.namespaceUri;
 import static com.provectus.odd.adapters.spark.utils.Utils.sqlGenerator;
-import static com.provectus.odd.adapters.spark.utils.Utils.sanitizeJdbcUrl;
 
 
 @Slf4j
@@ -122,7 +121,7 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
     return Collections.singletonList(new DataEntity()
             .type(DataEntityType.TABLE)
             .dataTransformer(new DataTransformer().sql(sql))
-            .oddrn(sqlGenerator(sanitizeJdbcUrl(relation.jdbcOptions().url()), tableName))
+            .oddrn(sqlGenerator(relation.jdbcOptions().url(), tableName))
     );
   }
 }

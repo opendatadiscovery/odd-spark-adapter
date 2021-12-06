@@ -4,12 +4,10 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
 import org.opendatadiscovery.client.model.DataEntity;
 import org.opendatadiscovery.client.model.DataEntityType;
-import org.opendatadiscovery.client.model.DataSet;
 
 import java.util.Collections;
 import java.util.List;
 
-import static com.provectus.odd.adapters.spark.utils.Utils.sanitizeJdbcUrl;
 import static com.provectus.odd.adapters.spark.utils.Utils.sqlGenerator;
 
 public class SaveIntoDataSourceCommandVisitor
@@ -20,7 +18,7 @@ public class SaveIntoDataSourceCommandVisitor
   @Override
   public List<DataEntity> apply(LogicalPlan logicalPlan) {
     SaveIntoDataSourceCommand command = (SaveIntoDataSourceCommand) logicalPlan;
-    var url = sanitizeJdbcUrl(command.options().get(URL).get());
+    var url = command.options().get(URL).get();
     var tableName = command.options().get(DBTABLE).get();
     return Collections.singletonList(new DataEntity()
             .type(DataEntityType.TABLE)

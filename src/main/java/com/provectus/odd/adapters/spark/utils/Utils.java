@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.opendatadiscovery.oddrn.Generator;
+import org.opendatadiscovery.oddrn.JdbcUrlParser;
 import org.opendatadiscovery.oddrn.model.MysqlPath;
 import org.opendatadiscovery.oddrn.model.PostgreSqlPath;
 
@@ -13,25 +14,6 @@ import java.util.Optional;
 
 @Slf4j
 public class Utils {
-
-    private static final String SLASH_DELIMITER_USER_PASSWORD_REGEX =
-            "[A-Za-z0-9_%]+//?[A-Za-z0-9_%]*@";
-    private static final String COLON_DELIMITER_USER_PASSWORD_REGEX =
-            "([/|,])[A-Za-z0-9_%]+:?[A-Za-z0-9_%]*@";
-
-    // strip the jdbc: prefix from the url. this leaves us with a url like
-    // postgresql://<hostname>:<port>/<database_name>?params
-    // we don't parse the URI here because different drivers use different connection
-    // formats that aren't always amenable to how Java parses URIs. E.g., the oracle
-    // driver format looks like oracle:<drivertype>:<user>/<password>@<database>
-    // whereas postgres, mysql, and sqlserver use the scheme://hostname:port/db format.
-    public static String sanitizeJdbcUrl(String jdbcUrl) {
-        jdbcUrl = jdbcUrl.substring(5);
-        return jdbcUrl
-                .replaceAll(SLASH_DELIMITER_USER_PASSWORD_REGEX, "@")
-                .replaceAll(COLON_DELIMITER_USER_PASSWORD_REGEX, "$1")
-                .replaceAll("(?<=[?,;&:)=])\\(?(?i)(?:user|username|password)=[^;&,)]+(?:[;&;)]|$)", "");
-    }
 
     public static String namespaceUri(URI outputPath) {
         return Optional.ofNullable(outputPath.getAuthority())
@@ -54,19 +36,16 @@ public class Utils {
 
     public static String sqlGenerator(String url, String tableName) {
         try {
-            var split = url.split("://");
-            var tokens = split[1].split("/");
-            switch (split[0]) {
-                case "mysql" :
-                    return new Generator().generate(MysqlPath.builder()
-                            .host(tokens[0])
-                            .database(tokens[1])
+            var oddrnPath = new JdbcUrlParser().parse(url);
+            switch (oddrnPath.prefix()) {
+                case "//mysql" :
+                    return new Generator().generate(((MysqlPath)oddrnPath)
+                            .toBuilder()
                             .table(tableName)
                             .build(), "table");
-                case "postgresql" :
-                    return new Generator().generate(PostgreSqlPath.builder()
-                            .host(tokens[0])
-                            .database(tokens[1])
+                case "//postgresql" :
+                    return new Generator().generate(((PostgreSqlPath)oddrnPath)
+                            .toBuilder()
                             .schema("public")
                             .table(tableName)
                             .build(), "table");
