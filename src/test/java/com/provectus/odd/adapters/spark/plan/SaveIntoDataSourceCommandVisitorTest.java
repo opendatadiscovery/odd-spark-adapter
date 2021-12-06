@@ -5,9 +5,12 @@ import org.junit.jupiter.api.Test;
 import scala.Option;
 import scala.collection.immutable.Map;
 
-import static com.provectus.odd.adapters.spark.mapper.DataTransformerMapper.DBTABLE;
-import static com.provectus.odd.adapters.spark.mapper.DataTransformerMapper.URL;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.provectus.odd.adapters.spark.plan.SaveIntoDataSourceCommandVisitor.URL;
+import static com.provectus.odd.adapters.spark.plan.SaveIntoDataSourceCommandVisitor.DBTABLE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
