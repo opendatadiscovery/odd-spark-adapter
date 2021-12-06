@@ -7,18 +7,22 @@ import org.opendatadiscovery.client.model.DataEntityList;
 import org.opendatadiscovery.client.model.DataEntityType;
 import org.opendatadiscovery.client.model.DataTransformer;
 import org.opendatadiscovery.client.model.DataTransformerRun;
+import org.opendatadiscovery.client.model.MetadataExtension;
 
 import org.opendatadiscovery.oddrn.Generator;
 import org.opendatadiscovery.oddrn.model.SparkPath;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.time.ZoneOffset.UTC;
+import static java.util.Collections.singletonList;
 
 public class DataEntityMapper {
 
@@ -53,10 +57,13 @@ public class DataEntityMapper {
     }
 
     public static DataEntity map(DataEntity dataEntity) {
+        var transformerRun = dataEntity.getDataTransformerRun();
         return new DataEntity()
-                .name(dataEntity.getDataTransformerRun().getTransformerOddrn().split("jobs/")[1])
+                .metadata(dataEntity.getMetadata())
+                .createdAt(transformerRun.getStartTime())
+                .name(transformerRun.getTransformerOddrn().split("jobs/")[1])
                 .type(DataEntityType.JOB)
-                .oddrn(dataEntity.getDataTransformerRun().getTransformerOddrn());
+                .oddrn(transformerRun.getTransformerOddrn());
     }
 
     public static DataEntity map(SparkListenerJobStart jobStart) {
@@ -65,8 +72,11 @@ public class DataEntityMapper {
         var host = properties.getProperty(SPARK_MASTER).split("://")[1].split(":")[0];
         var run = properties.getProperty(SPARK_APP_ID);
         try {
+            Map props = properties;
             return new DataEntity()
                     .name(run)
+                    .metadata(singletonList(new MetadataExtension()
+                            .metadata(new HashMap<>((Map<String, Object>) props))))
                     .type(DataEntityType.JOB_RUN)
                     .oddrn(new Generator().generate(SparkPath.builder()
                             .host(host)
