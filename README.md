@@ -43,7 +43,7 @@ mvn clean package -dskipTests
 
 `docker-compose up -d`
 
-To start ETL job
+To start ETL job using OddAdapterSparkListener
 ```sh
 ./spark-submit \
 --master spark://spark-master:7077 \
@@ -51,5 +51,15 @@ To start ETL job
 --driver-memory 1G --executor-memory 1G \
 --conf spark.extraListeners=org.opendatadiscovery.adapters.spark.OddAdapterSparkListener \
 --conf spark.odd.host.url=http://host.docker.internal:8080  \
+/opt/spark-apps/mysql_pg_job.py
+```
+To start ETL job using SparkAgent
+```sh
+./spark-submit \
+--master spark://spark-master:7077 \
+--driver-memory 1G \
+--executor-memory 1G \
+--jars /opt/spark-apps/postgresql-42.2.22.jar,/opt/spark-apps/mysql-connector-java-8.0.26.jar \
+--driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar=http://host.docker.internal:8080" \
 /opt/spark-apps/mysql_pg_job.py
 ```

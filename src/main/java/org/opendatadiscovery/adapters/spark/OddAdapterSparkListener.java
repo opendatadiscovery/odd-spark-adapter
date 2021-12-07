@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 
 import static org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils.findSparkConfigKey;
 import static java.time.ZoneOffset.UTC;
@@ -57,6 +58,8 @@ public class OddAdapterSparkListener extends SparkListener {
     private DataEntity dataEntity = null;
 
     private int jobCount = 0;
+
+    private static Properties properties;
 
     @SuppressWarnings("unused")
     public static void instrument(SparkContext context) {
@@ -92,10 +95,16 @@ public class OddAdapterSparkListener extends SparkListener {
         }
     }
 
+    public static void setProperties(String agentArgs) {
+        properties = new Properties();
+        properties.setProperty(ODD_HOST_CONFIG_KEY, agentArgs);
+    }
+
     private static void init(OddAdapterSparkListener listener) {
         var sparkEnv = SparkEnv$.MODULE$.get();
         var conf = sparkEnv.conf();
-        var endpoint = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY, null);
+        var endpoint = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY,
+                properties.getProperty(ODD_HOST_CONFIG_KEY));
         if (endpoint != null) {
             log.info("Setting ODD host {}", endpoint);
             listener.client = new OpenDataDiscoveryIngestionApi();
