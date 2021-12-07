@@ -1,4 +1,4 @@
-package com.provectus.odd.adapters.spark.plan;
+package org.opendatadiscovery.adapters.spark.plan;
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.opendatadiscovery.client.model.DataEntity;

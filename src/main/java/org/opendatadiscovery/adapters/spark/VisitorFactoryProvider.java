@@ -1,4 +1,4 @@
-package com.provectus.odd.adapters.spark;
+package org.opendatadiscovery.adapters.spark;
 
 import org.apache.spark.sql.SparkSession;
 

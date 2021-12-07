@@ -1,12 +1,12 @@
-package com.provectus.odd.adapters.spark.plan;
+package org.opendatadiscovery.adapters.spark.plan;
 
 import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
 import org.junit.jupiter.api.Test;
 import scala.Option;
 import scala.collection.immutable.Map;
 
-import static com.provectus.odd.adapters.spark.plan.SaveIntoDataSourceCommandVisitor.URL;
-import static com.provectus.odd.adapters.spark.plan.SaveIntoDataSourceCommandVisitor.DBTABLE;
+import static org.opendatadiscovery.adapters.spark.plan.SaveIntoDataSourceCommandVisitor.URL;
+import static org.opendatadiscovery.adapters.spark.plan.SaveIntoDataSourceCommandVisitor.DBTABLE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,7 +28,7 @@ public class SaveIntoDataSourceCommandVisitorTest {
         assertEquals("mta_transform", command.options().get(DBTABLE).get());
         var data = new SaveIntoDataSourceCommandVisitor().apply(command);
         assertTrue(data.stream().anyMatch(d -> d.getOddrn()
-                .equals("//postgresql/host/target-db:5432/databases/mta_data/schemas/public/tables/mta_transform")));
+                .equals("//postgresql/host/target-db/databases/mta_data/schemas/public/tables/mta_transform")));
     }
 
     @Test

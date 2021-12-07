@@ -1,9 +1,9 @@
-package com.provectus.odd.adapters.spark;
+package org.opendatadiscovery.adapters.spark;
 
-import com.provectus.odd.adapters.spark.plan.InsertIntoHadoopFsRelationVisitor;
-import com.provectus.odd.adapters.spark.plan.LogicalRelationVisitor;
-import com.provectus.odd.adapters.spark.plan.QueryPlanVisitor;
-import com.provectus.odd.adapters.spark.plan.SaveIntoDataSourceCommandVisitor;
+import org.opendatadiscovery.adapters.spark.plan.InsertIntoHadoopFsRelationVisitor;
+import org.opendatadiscovery.adapters.spark.plan.LogicalRelationVisitor;
+import org.opendatadiscovery.adapters.spark.plan.QueryPlanVisitor;
+import org.opendatadiscovery.adapters.spark.plan.SaveIntoDataSourceCommandVisitor;
 import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.opendatadiscovery.client.model.DataEntity;

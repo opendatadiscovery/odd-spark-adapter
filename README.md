@@ -34,10 +34,8 @@ Further development may include:
 ```sh
 mvn clean package -dskipTests
 ```
-This creates `OddAdapterSparkListener.jar`.
 
-`odd.endpoint` used to specify endpoint to 
-report DataProcessor/DataProcessorRun to platform.
+`spark.odd.host.url` used to specify ODD platform host url.
 
 ## To run in docker
 
@@ -51,7 +49,7 @@ To start ETL job
 --master spark://spark-master:7077 \
 --jars /opt/spark-apps/postgresql-42.2.22.jar,/opt/spark-apps/mysql-connector-java-8.0.26.jar,/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar \
 --driver-memory 1G --executor-memory 1G \
---conf spark.extraListeners=com.provectus.odd.adapters.spark.OddAdapterSparkListener \
+--conf spark.extraListeners=org.opendatadiscovery.adapters.spark.OddAdapterSparkListener \
 --conf spark.odd.host.url=http://host.docker.internal:8080  \
 /opt/spark-apps/mysql_pg_job.py
 ```

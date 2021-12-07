@@ -1,6 +1,6 @@
-package com.provectus.odd.adapters.spark.plan;
+package org.opendatadiscovery.adapters.spark.plan;
 
-import com.provectus.odd.adapters.spark.utils.Utils;
+import org.opendatadiscovery.adapters.spark.utils.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.catalyst.catalog.CatalogTable;
@@ -20,10 +20,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static com.provectus.odd.adapters.spark.utils.Utils.fileGenerator;
-import static com.provectus.odd.adapters.spark.utils.Utils.namespaceUri;
-import static com.provectus.odd.adapters.spark.utils.Utils.sqlGenerator;
 
 
 @Slf4j
@@ -78,22 +74,21 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
                       // TODO- refactor this to return a single partitioned dataset based on static
                       // static partitions in the relation
                       var uri = path.toUri();
-                      var namespace = namespaceUri(uri);
+                      var namespace = Utils.namespaceUri(uri);
                       var patt = String.format("%s://%s", namespace, uri.getPath());
                       var fileName = Arrays.stream(relation.location().inputFiles())
                               .filter(f -> f.contains(patt))
                               .map(f -> f.replace(patt, "")).collect(Collectors.joining());
                       return new DataEntity()
                               .type(DataEntityType.FILE)
-                              .oddrn(fileGenerator(namespace, uri.getPath(), fileName));
+                              .oddrn(Utils.fileGenerator(namespace, uri.getPath(), fileName));
                     })
             .collect(Collectors.toList());
   }
 
   private List<DataEntity> handleJdbcRelation(JDBCRelation relation) {
     // TODO- if a relation is composed of a complex sql query, we should attempt to
-    // extract the
-    // table names so that we can construct a true lineage
+    // extract the table names so that we can construct a true lineage
     String tableName =
             relation
                     .jdbcOptions()
@@ -121,7 +116,7 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
     return Collections.singletonList(new DataEntity()
             .type(DataEntityType.TABLE)
             .dataTransformer(new DataTransformer().sql(sql))
-            .oddrn(sqlGenerator(relation.jdbcOptions().url(), tableName))
+            .oddrn(Utils.sqlGenerator(relation.jdbcOptions().url(), tableName))
     );
   }
 }

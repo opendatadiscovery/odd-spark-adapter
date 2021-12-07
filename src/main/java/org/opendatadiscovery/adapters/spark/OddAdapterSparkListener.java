@@ -1,13 +1,17 @@
-package com.provectus.odd.adapters.spark;
+package org.opendatadiscovery.adapters.spark;
 
-import com.provectus.odd.adapters.spark.mapper.DataEntityMapper;
-import com.provectus.odd.adapters.spark.plan.QueryPlanVisitor;
-import com.provectus.odd.adapters.spark.utils.ScalaConversionUtils;
+import org.opendatadiscovery.adapters.spark.mapper.DataEntityMapper;
+import org.opendatadiscovery.adapters.spark.plan.QueryPlanVisitor;
+import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.spark.SparkContext;
 import org.apache.spark.SparkContext$;
 import org.apache.spark.SparkEnv$;
 
 
+import org.apache.spark.rdd.PairRDDFunctions;
+import org.apache.spark.rdd.RDD;
 import org.apache.spark.scheduler.SparkListenerApplicationStart;
 import org.apache.spark.scheduler.SparkListenerApplicationEnd;
 import org.apache.spark.scheduler.SparkListener;
@@ -27,6 +31,7 @@ import org.opendatadiscovery.client.model.DataTransformerRun;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -34,7 +39,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static com.provectus.odd.adapters.spark.utils.ScalaConversionUtils.findSparkConfigKey;
+import static org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils.findSparkConfigKey;
 import static java.time.ZoneOffset.UTC;
 
 
@@ -53,19 +58,57 @@ public class OddAdapterSparkListener extends SparkListener {
 
     private int jobCount = 0;
 
-    @Override
-    public void onApplicationStart(SparkListenerApplicationStart applicationStart) {
-        log.info("onApplicationStart: {}", applicationStart);
+    @SuppressWarnings("unused")
+    public static void instrument(SparkContext context) {
+        log.info("Initializing ODD SparkContext listener...");
+        OddAdapterSparkListener listener = new OddAdapterSparkListener();
+        init(listener);
+        log.info(
+                "Initialized ODD listener with \nspark version: {}\njava.version: {}\nconfiguration: {}",
+                context.version(),
+                System.getProperty("java.version"),
+                context.conf());
+        context.addSparkListener(listener);
+    }
+
+    @SuppressWarnings("unused")
+    public static void registerOutput(PairRDDFunctions<?, ?> pairRDDFunctions, Configuration conf) {
+        try {
+            log.info("Initializing ODD PairRDDFunctions listener...");
+            Field[] declaredFields = pairRDDFunctions.getClass().getDeclaredFields();
+            for (Field field : declaredFields) {
+                if (field.getName().endsWith("self") && RDD.class.isAssignableFrom(field.getType())) {
+                    field.setAccessible(true);
+                    try {
+                        RDD<?> rdd = (RDD<?>) field.get(pairRDDFunctions);
+                        //outputs.put(rdd, conf);
+                    } catch (IllegalArgumentException | IllegalAccessException e) {
+                        e.printStackTrace(System.out);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Could not initialize ODD PairRDDFunctions listener", e);
+        }
+    }
+
+    private static void init(OddAdapterSparkListener listener) {
         var sparkEnv = SparkEnv$.MODULE$.get();
         var conf = sparkEnv.conf();
         var endpoint = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY, null);
         if (endpoint != null) {
             log.info("Setting ODD host {}", endpoint);
-            client = new OpenDataDiscoveryIngestionApi();
-            client.getApiClient().setBasePath(endpoint);
+            listener.client = new OpenDataDiscoveryIngestionApi();
+            listener.client.getApiClient().setBasePath(endpoint);
         } else {
             log.warn("No ODD host configured");
         }
+    }
+
+    @Override
+    public void onApplicationStart(SparkListenerApplicationStart applicationStart) {
+        log.info("onApplicationStart: {}", applicationStart);
+        init(this);
     }
 
     @Override

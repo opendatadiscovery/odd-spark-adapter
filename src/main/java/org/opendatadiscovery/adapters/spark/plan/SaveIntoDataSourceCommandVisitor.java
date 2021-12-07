@@ -1,14 +1,13 @@
-package com.provectus.odd.adapters.spark.plan;
+package org.opendatadiscovery.adapters.spark.plan;
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
+import org.opendatadiscovery.adapters.spark.utils.Utils;
 import org.opendatadiscovery.client.model.DataEntity;
 import org.opendatadiscovery.client.model.DataEntityType;
 
 import java.util.Collections;
 import java.util.List;
-
-import static com.provectus.odd.adapters.spark.utils.Utils.sqlGenerator;
 
 public class SaveIntoDataSourceCommandVisitor
     extends QueryPlanVisitor<SaveIntoDataSourceCommand, DataEntity> {
@@ -22,7 +21,7 @@ public class SaveIntoDataSourceCommandVisitor
     var tableName = command.options().get(DBTABLE).get();
     return Collections.singletonList(new DataEntity()
             .type(DataEntityType.TABLE)
-            .oddrn(sqlGenerator(url, tableName))
+            .oddrn(Utils.sqlGenerator(url, tableName))
     );
   }
 }

@@ -1,4 +1,4 @@
-package com.provectus.odd.adapters.spark.utils;
+package org.opendatadiscovery.adapters.spark.utils;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;

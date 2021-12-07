@@ -1,4 +1,4 @@
-package com.provectus.odd.adapters.spark.mapper;
+package org.opendatadiscovery.adapters.spark.mapper;
 
 import org.apache.spark.scheduler.SparkListenerJobStart;
 
@@ -60,7 +60,7 @@ public class DataEntityMapper {
         var transformerRun = dataEntity.getDataTransformerRun();
         return new DataEntity()
                 .metadata(dataEntity.getMetadata())
-                .createdAt(transformerRun.getStartTime())
+                .createdAt(dataEntity.getCreatedAt())
                 .name(transformerRun.getTransformerOddrn().split("jobs/")[1])
                 .type(DataEntityType.JOB)
                 .oddrn(transformerRun.getTransformerOddrn());
@@ -73,8 +73,10 @@ public class DataEntityMapper {
         var run = properties.getProperty(SPARK_APP_ID);
         try {
             Map props = properties;
+            var startTime = OffsetDateTime.ofInstant(Instant.ofEpochMilli(jobStart.time()), UTC);
             return new DataEntity()
                     .name(run)
+                    .createdAt(startTime)
                     .metadata(singletonList(new MetadataExtension()
                             .metadata(new HashMap<>((Map<String, Object>) props))))
                     .type(DataEntityType.JOB_RUN)
@@ -85,7 +87,7 @@ public class DataEntityMapper {
                             .build(), "run")
                     )
                     .dataTransformerRun(new DataTransformerRun()
-                            .startTime(OffsetDateTime.ofInstant(Instant.ofEpochMilli(jobStart.time()), UTC))
+                            .startTime(startTime)
                             .transformerOddrn(new Generator().generate(SparkPath.builder()
                                             .host(host)
                                             .job(job)

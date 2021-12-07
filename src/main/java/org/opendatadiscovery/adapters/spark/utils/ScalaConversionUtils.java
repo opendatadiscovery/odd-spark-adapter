@@ -1,4 +1,4 @@
-package com.provectus.odd.adapters.spark.utils;
+package org.opendatadiscovery.adapters.spark.utils;
 
 import org.apache.spark.SparkConf;
 import scala.Function0;

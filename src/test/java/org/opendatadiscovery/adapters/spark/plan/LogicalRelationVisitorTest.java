@@ -1,4 +1,4 @@
-package com.provectus.odd.adapters.spark.plan;
+package org.opendatadiscovery.adapters.spark.plan;
 
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.catalyst.plans.logical.UnaryNode;
@@ -9,7 +9,7 @@ import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
 import org.junit.jupiter.api.Test;
 import scala.Option;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -46,6 +46,6 @@ public class LogicalRelationVisitorTest {
         when(unaryNode.child()).thenReturn(logicalPlan);
         var data = visitor.apply(unaryNode);
         assertTrue(data.stream().anyMatch(d -> d.getOddrn()
-                .equals("//mysql/host/source-db:3306/databases/mta_data/tables/mta_reports")));
+                .equals("//mysql/host/source-db/databases/mta_data/tables/mta_reports")));
     }
 }

@@ -42,4 +42,11 @@ jar {
     from {
         configurations.extraLibs.collect { it.isDirectory() ? it : zipTree(it) }
     }
+    manifest {
+        attributes(
+                "Premain-Class": 'org.opendatadiscovery.adapters.spark.SparkAgent',
+                "Agent-Class": 'org.opendatadiscovery.adapters.spark.SparkAgent'
+        )
+    }
+    zip64 true
 }
