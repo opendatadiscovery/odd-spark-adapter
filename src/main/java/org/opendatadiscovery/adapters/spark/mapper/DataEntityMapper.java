@@ -2,6 +2,7 @@ package org.opendatadiscovery.adapters.spark.mapper;
 
 import org.apache.spark.scheduler.SparkListenerJobStart;
 
+import org.opendatadiscovery.adapters.spark.utils.Utils;
 import org.opendatadiscovery.client.model.DataEntity;
 import org.opendatadiscovery.client.model.DataEntityList;
 import org.opendatadiscovery.client.model.DataEntityType;
@@ -64,6 +65,13 @@ public class DataEntityMapper {
                 .name(transformerRun.getTransformerOddrn().split("jobs/")[1])
                 .type(DataEntityType.JOB)
                 .oddrn(transformerRun.getTransformerOddrn());
+    }
+
+    public static DataEntity map(String sql, String url, String tableName) {
+        return new DataEntity()
+                .type(DataEntityType.TABLE)
+                .dataTransformer(new DataTransformer().sql(sql))
+                .oddrn(Utils.sqlGenerator(url, tableName));
     }
 
     public static DataEntity map(SparkListenerJobStart jobStart) {

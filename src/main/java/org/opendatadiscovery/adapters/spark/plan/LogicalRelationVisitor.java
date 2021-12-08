@@ -1,5 +1,9 @@
 package org.opendatadiscovery.adapters.spark.plan;
 
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.util.TablesNamesFinder;
+import org.opendatadiscovery.adapters.spark.mapper.DataEntityMapper;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.SparkContext;
@@ -8,13 +12,10 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.UnaryNode;
 import org.apache.spark.sql.execution.datasources.HadoopFsRelation;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
-import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions;
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
 import org.opendatadiscovery.client.model.DataEntity;
 import org.opendatadiscovery.client.model.DataEntityType;
-import org.opendatadiscovery.client.model.DataTransformer;
 import scala.collection.JavaConversions;
-import scala.runtime.AbstractFunction0;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -87,36 +88,26 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
   }
 
   private List<DataEntity> handleJdbcRelation(JDBCRelation relation) {
-    // TODO- if a relation is composed of a complex sql query, we should attempt to
-    // extract the table names so that we can construct a true lineage
-    String tableName =
-            relation
-                    .jdbcOptions()
-                    .parameters()
-                    .get(JDBCOptions.JDBC_TABLE_NAME())
-                    .getOrElse(
-                            new AbstractFunction0<>() {
-                              @Override
-                              public String apply() {
-                                return "COMPLEX";
-                              }
-                            });
-    String sql =
-            relation
-                    .jdbcOptions()
-                    .parameters()
-                    .get(JDBCOptions.JDBC_QUERY_STRING())
-                    .getOrElse(
-                            new AbstractFunction0<>() {
-                              @Override
-                              public String apply() {
-                                return "";
-                              }
-                            });
-    return Collections.singletonList(new DataEntity()
-            .type(DataEntityType.TABLE)
-            .dataTransformer(new DataTransformer().sql(sql))
-            .oddrn(Utils.sqlGenerator(relation.jdbcOptions().url(), tableName))
-    );
+
+    var url = relation.jdbcOptions().url();
+    var tableOrQuery = relation.jdbcOptions().tableOrQuery();
+    var tables = extractTableNames(tableOrQuery);
+    if (tables.isEmpty()) {
+      return Collections.singletonList(DataEntityMapper.map(null, url, tableOrQuery));
+    }
+    return tables.stream().map(tableName -> DataEntityMapper.map(tableOrQuery, url, tableName)).collect(Collectors.toList());
+  }
+
+  private List<String> extractTableNames(String tableOrQuery) {
+    try {
+      var sql = tableOrQuery.substring(tableOrQuery.indexOf("(") + 1, tableOrQuery.indexOf(")"));
+      var statement = CCJSqlParserUtil.parse(sql);
+      return new TablesNamesFinder().getTableList(statement);
+    } catch (StringIndexOutOfBoundsException ignored) {
+      log.info("JdbcRelation table found: {}", tableOrQuery);
+    } catch (JSQLParserException e) {
+      log.warn("JDBCRelation ", e);
+    }
+    return Collections.emptyList();
   }
 }

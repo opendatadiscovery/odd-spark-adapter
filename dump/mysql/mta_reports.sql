@@ -42,4 +42,26 @@ INSERT INTO `mta_reports` (`latitude`, `longitude`, `time_received`, `vehicle_id
 (40.668602,	-73.986697,	'2014-08-01 04:00:81',	481,	4135.34710710144,	12,	'IN_PROGRESS',	'MTA NYCT_B63',	'MTA NYCT_JG_C4-Weekday-141500_B63_123',	2.63183804205619,	'MTA_305423',	NULL,	NULL),
 (40.668602,	-73.986697,	'2014-08-01 04:00:91',	482,	4135.34710710144,	14,	'IN_PROGRESS',	'MTA NYCT_B63',	'MTA NYCT_JG_C4-Weekday-141500_B63_123',	2.63183804205619,	'MTA_305423',	NULL,	NULL);
 
+DROP TABLE IF EXISTS `vehicle`;
+CREATE TABLE `vehicle`
+(
+    `id`   int(11) NOT NULL,
+    `name` varchar(100) COLLATE utf8mb4_unicode_520_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_520_ci;
+
+INSERT INTO `vehicle` (`id`, `name`)
+VALUES (470, 'bus'),
+       (471, 'train'),
+       (472, 'airplain'),
+       (473, 'car'),
+       (474, 'name'),
+       (475, 'name'),
+       (476, 'name'),
+       (477, 'name'),
+       (478, 'name'),
+       (479, 'name'),
+       (480, 'name'),
+       (481, 'name'),
+       (482, 'name');
+
 -- 2021-11-28 15:23:48
