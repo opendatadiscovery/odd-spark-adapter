@@ -18,14 +18,13 @@ import org.apache.spark.scheduler.ActiveJob;
 import org.apache.spark.scheduler.ResultStage;
 import org.apache.spark.util.SerializableJobConf;
 import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
-import org.opendatadiscovery.client.model.DataEntity;
-import org.opendatadiscovery.client.model.DataEntityType;
 import scala.Function2;
 import scala.collection.JavaConversions;
 import scala.collection.Seq;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,8 +37,6 @@ import java.util.HashSet;
 import java.util.stream.Collectors;
 
 import static org.opendatadiscovery.adapters.spark.utils.Utils.CAMEL_TO_SNAKE_CASE;
-import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
-import static org.opendatadiscovery.adapters.spark.utils.Utils.namespaceUri;
 
 @Slf4j
 public class RddMapper {
@@ -82,26 +79,21 @@ public class RddMapper {
         }
     }
 
-    public List<DataEntity> inputs(RDD<?> finalRdd) {
+    public List<URI> inputs(RDD<?> finalRdd) {
         var rdds = flatten(finalRdd);
-        List<DataEntity> result = new ArrayList<>();
+        List<URI> result = new ArrayList<>();
         for (RDD<?> rdd : rdds) {
             Path[] inputPaths = getInputPaths(rdd);
             if (inputPaths != null) {
                 for (Path path : inputPaths) {
-                    var uri = path.toUri();
-                    var namespace = namespaceUri(uri);
-                    result.add(new DataEntity()
-                            .type(DataEntityType.FILE)
-                            .oddrn(fileGenerator(namespace, uri.getPath(), null))
-                    );
+                    result.add(path.toUri());
                 }
             }
         }
         return result;
     }
 
-    public List<DataEntity> outputs(ActiveJob job, Configuration config) {
+    public List<URI> outputs(ActiveJob job, Configuration config) {
         Configuration jc = new JobConf();
         if (job.finalStage() instanceof ResultStage) {
             Function2<TaskContext, scala.collection.Iterator<?>, ?> fn = ((ResultStage) job.finalStage()).func();
@@ -132,12 +124,7 @@ public class RddMapper {
         var outputPath = getOutputPath(jc);
         log.info("Found output path {} from RDD {}", outputPath, job.finalStage().rdd());
         if (outputPath != null) {
-            var uri = outputPath.toUri();
-            var namespace = namespaceUri(uri);
-            return Collections.singletonList(new DataEntity()
-                    .type(DataEntityType.FILE)
-                    .oddrn(fileGenerator(namespace, uri.getPath(), null))
-            );
+            return Collections.singletonList(outputPath.toUri());
         }
         return Collections.emptyList();
     }

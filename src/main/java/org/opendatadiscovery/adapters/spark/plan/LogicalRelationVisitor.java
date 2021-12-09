@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
+
 
 @Slf4j
 public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, DataEntity> {
@@ -82,7 +84,7 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
                               .map(f -> f.replace(patt, "")).collect(Collectors.joining());
                       return new DataEntity()
                               .type(DataEntityType.FILE)
-                              .oddrn(Utils.fileGenerator(namespace, uri.getPath(), fileName));
+                              .oddrn(fileGenerator(namespace, uri.getPath(), fileName));
                     })
             .collect(Collectors.toList());
   }

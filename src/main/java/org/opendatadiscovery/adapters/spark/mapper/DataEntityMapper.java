@@ -13,6 +13,7 @@ import org.opendatadiscovery.client.model.MetadataExtension;
 import org.opendatadiscovery.oddrn.Generator;
 import org.opendatadiscovery.oddrn.model.SparkPath;
 
+import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
@@ -24,6 +25,8 @@ import java.util.stream.Collectors;
 
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.namespaceUri;
 
 public class DataEntityMapper {
 
@@ -108,5 +111,16 @@ public class DataEntityMapper {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static DataEntity map(URI uri) {
+        var namespace = namespaceUri(uri);
+        return new DataEntity()
+                .type(DataEntityType.FILE)
+                .oddrn(fileGenerator(namespace, uri.getPath(), null));
+    }
+
+    public static List<DataEntity> map(List<URI> uris) {
+        return uris.stream().map(DataEntityMapper::map).collect(Collectors.toList());
     }
 }
