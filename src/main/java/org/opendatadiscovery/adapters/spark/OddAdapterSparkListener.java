@@ -26,6 +26,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.SQLExecution;
 import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionEnd;
 import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart;
+import org.opendatadiscovery.client.ApiClient;
 import org.opendatadiscovery.client.api.OpenDataDiscoveryIngestionApi;
 import org.opendatadiscovery.client.model.DataEntity;
 import org.opendatadiscovery.client.model.DataTransformerRun;
@@ -51,10 +52,6 @@ public class OddAdapterSparkListener extends SparkListener {
     public static final String ODD_HOST_CONFIG_KEY = "odd.host.url";
     public static final String SPARK_SQL_EXECUTION_ID = "spark.sql.execution.id";
 
-    private VisitorFactory visitorFactory;
-
-    private OpenDataDiscoveryIngestionApi client;
-
     private final List<DataEntity> inputs = Collections.synchronizedList(new ArrayList<>());
 
     private final List<DataEntity> outputs = Collections.synchronizedList(new ArrayList<>());
@@ -63,9 +60,9 @@ public class OddAdapterSparkListener extends SparkListener {
 
     private int jobCount = 0;
 
-    private static Properties properties;
+    private static final Properties properties = new Properties();
 
-    private static WeakHashMap<RDD<?>, Configuration> rddConfig = new WeakHashMap<>();
+    private static final WeakHashMap<RDD<?>, Configuration> rddConfig = new WeakHashMap<>();
 
     @SuppressWarnings("unused")
     public static void instrument(SparkContext context) {
@@ -75,7 +72,6 @@ public class OddAdapterSparkListener extends SparkListener {
                 System.getProperty("java.version"),
                 context.conf().toDebugString());
         OddAdapterSparkListener listener = new OddAdapterSparkListener();
-        init(listener);
         context.addSparkListener(listener);
     }
 
@@ -105,28 +101,12 @@ public class OddAdapterSparkListener extends SparkListener {
     }
 
     public static void setProperties(String agentArgs) {
-        properties = new Properties();
         properties.setProperty(ODD_HOST_CONFIG_KEY, agentArgs);
-    }
-
-    private static void init(OddAdapterSparkListener listener) {
-        listener.visitorFactory = VisitorFactoryProvider.getInstance(SparkContext.getOrCreate());
-        var conf = SparkEnv$.MODULE$.get().conf();
-        var host = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY,
-                properties.getProperty(ODD_HOST_CONFIG_KEY));
-        if (host != null) {
-            log.info("Setting ODD host {}", host);
-            listener.client = new OpenDataDiscoveryIngestionApi();
-            listener.client.getApiClient().setBasePath(host);
-        } else {
-            log.warn("No ODD host configured");
-        }
     }
 
     @Override
     public void onApplicationStart(SparkListenerApplicationStart applicationStart) {
         log.info("onApplicationStart: {}", applicationStart);
-        init(this);
     }
 
     @Override
@@ -135,11 +115,20 @@ public class OddAdapterSparkListener extends SparkListener {
         rddConfig.clear();
         var dataEntityList = DataEntityMapper.map(dataEntity, inputs, outputs);
         log.info("{}", dataEntityList);
-        var res = client.postDataEntityListWithHttpInfo(dataEntityList);
-        log.info("POST - {}", res.blockOptional()
-                .map(ResponseEntity::getStatusCode)
-                .map(HttpStatus::getReasonPhrase)
-                .orElse(""));
+        var conf = SparkEnv$.MODULE$.get().conf();
+        var host = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY,
+                properties.getProperty(ODD_HOST_CONFIG_KEY));
+        if (host != null) {
+            log.info("Setting ODD host {}", host);
+            var client = new OpenDataDiscoveryIngestionApi(new ApiClient().setBasePath(host));
+            var res = client.postDataEntityListWithHttpInfo(dataEntityList);
+            log.info("POST - {}", res.blockOptional()
+                    .map(ResponseEntity::getStatusCode)
+                    .map(HttpStatus::getReasonPhrase)
+                    .orElse(""));
+        } else {
+            log.warn("No ODD host configured");
+        }
     }
 
     @Override
@@ -212,6 +201,7 @@ public class OddAdapterSparkListener extends SparkListener {
         var queryExecution = SQLExecution.getQueryExecution(executionId);
         if (queryExecution != null) {
             //log.info("sparkPlan {}", queryExecution.sparkPlan().prettyJson());
+            var visitorFactory = VisitorFactoryProvider.getInstance(SparkContext.getOrCreate());
             var logicalPlan = queryExecution.logical();
             var sqlContext = queryExecution.sparkPlan().sqlContext();
             var inputs = apply(visitorFactory.getInputVisitors(sqlContext), logicalPlan);
