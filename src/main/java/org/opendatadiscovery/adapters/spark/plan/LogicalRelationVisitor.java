@@ -27,89 +27,89 @@ import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
 
 @Slf4j
 public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, DataEntity> {
-  private final SparkContext context;
+    private final SparkContext context;
 
-  public LogicalRelationVisitor(SparkContext context) {
-    this.context = context;
-  }
-
-  @Override
-  public boolean isDefinedAt(LogicalPlan logicalPlan) {
-    return logicalPlan instanceof LogicalRelation || logicalPlan instanceof UnaryNode;
-  }
-
-  @Override
-  public List<DataEntity> apply(LogicalPlan logicalPlan) {
-    LogicalRelation logRel = findLogicalRelation(logicalPlan);
-    if (logRel.relation() instanceof HadoopFsRelation) {
-      return handleHadoopFsRelation((HadoopFsRelation) logRel.relation());
-    } else if (logRel.relation() instanceof JDBCRelation) {
-      return handleJdbcRelation((JDBCRelation) logRel.relation());
-    } else if (logRel.catalogTable().isDefined()) {
-      return handleCatalogTable(logRel);
+    public LogicalRelationVisitor(SparkContext context) {
+        this.context = context;
     }
-    throw new IllegalArgumentException(
-        "Expected logical plan to be either HadoopFsRelation, JDBCRelation, "
-            + "or CatalogTable but was "
-            + logicalPlan);
-  }
 
-  private LogicalRelation findLogicalRelation(LogicalPlan logicalPlan) {
-    if (logicalPlan instanceof LogicalRelation) {
-      return (LogicalRelation) logicalPlan;
+    @Override
+    public boolean isDefinedAt(LogicalPlan logicalPlan) {
+        return logicalPlan instanceof LogicalRelation || logicalPlan instanceof UnaryNode;
     }
-    return findLogicalRelation(((UnaryNode) logicalPlan).child());
-  }
 
-  private List<DataEntity> handleCatalogTable(LogicalRelation logRel) {
-    CatalogTable catalogTable = logRel.catalogTable().get();
-    return Collections.singletonList(new DataEntity()
-            .oddrn(catalogTable.location().getPath())
-    );
-  }
-
-  private List<DataEntity> handleHadoopFsRelation(HadoopFsRelation relation) {
-    return JavaConversions.asJavaCollection(relation.location().rootPaths()).stream()
-            .map(p -> Utils.getDirectoryPath(p, context.hadoopConfiguration()))
-            .distinct()
-            .map(
-                    path -> {
-                      // TODO- refactor this to return a single partitioned dataset based on static
-                      // static partitions in the relation
-                      var uri = path.toUri();
-                      var namespace = Utils.namespaceUri(uri);
-                      var patt = String.format("%s://%s", namespace, uri.getPath());
-                      var fileName = Arrays.stream(relation.location().inputFiles())
-                              .filter(f -> f.contains(patt))
-                              .map(f -> f.replace(patt, "")).collect(Collectors.joining());
-                      return new DataEntity()
-                              .type(DataEntityType.FILE)
-                              .oddrn(fileGenerator(namespace, uri.getPath(), fileName));
-                    })
-            .collect(Collectors.toList());
-  }
-
-  private List<DataEntity> handleJdbcRelation(JDBCRelation relation) {
-
-    var url = relation.jdbcOptions().url();
-    var tableOrQuery = relation.jdbcOptions().tableOrQuery();
-    var tables = extractTableNames(tableOrQuery);
-    if (tables.isEmpty()) {
-      return Collections.singletonList(DataEntityMapper.map(null, url, tableOrQuery));
+    @Override
+    public List<DataEntity> apply(LogicalPlan logicalPlan) {
+        LogicalRelation logRel = findLogicalRelation(logicalPlan);
+        if (logRel.relation() instanceof HadoopFsRelation) {
+            return handleHadoopFsRelation((HadoopFsRelation) logRel.relation());
+        } else if (logRel.relation() instanceof JDBCRelation) {
+            return handleJdbcRelation((JDBCRelation) logRel.relation());
+        } else if (logRel.catalogTable().isDefined()) {
+            return handleCatalogTable(logRel);
+        }
+        throw new IllegalArgumentException(
+                "Expected logical plan to be either HadoopFsRelation, JDBCRelation, "
+                        + "or CatalogTable but was "
+                        + logicalPlan);
     }
-    return tables.stream().map(tableName -> DataEntityMapper.map(tableOrQuery, url, tableName)).collect(Collectors.toList());
-  }
 
-  private List<String> extractTableNames(String tableOrQuery) {
-    try {
-      var sql = tableOrQuery.substring(tableOrQuery.indexOf("(") + 1, tableOrQuery.indexOf(")"));
-      var statement = CCJSqlParserUtil.parse(sql);
-      return new TablesNamesFinder().getTableList(statement);
-    } catch (StringIndexOutOfBoundsException ignored) {
-      log.info("JdbcRelation table found: {}", tableOrQuery);
-    } catch (JSQLParserException e) {
-      log.warn("JDBCRelation ", e);
+    private LogicalRelation findLogicalRelation(LogicalPlan logicalPlan) {
+        if (logicalPlan instanceof LogicalRelation) {
+            return (LogicalRelation) logicalPlan;
+        }
+        return findLogicalRelation(((UnaryNode) logicalPlan).child());
     }
-    return Collections.emptyList();
-  }
+
+    private List<DataEntity> handleCatalogTable(LogicalRelation logRel) {
+        CatalogTable catalogTable = logRel.catalogTable().get();
+        return Collections.singletonList(new DataEntity()
+                .oddrn(catalogTable.location().getPath())
+        );
+    }
+
+    private List<DataEntity> handleHadoopFsRelation(HadoopFsRelation relation) {
+        return JavaConversions.asJavaCollection(relation.location().rootPaths()).stream()
+                .map(p -> Utils.getDirectoryPath(p, context.hadoopConfiguration()))
+                .distinct()
+                .map(
+                        path -> {
+                            // TODO- refactor this to return a single partitioned dataset based on static
+                            // static partitions in the relation
+                            var uri = path.toUri();
+                            var namespace = Utils.namespaceUri(uri);
+                            var patt = String.format("%s://%s", namespace, uri.getPath());
+                            var fileName = Arrays.stream(relation.location().inputFiles())
+                                    .filter(f -> f.contains(patt))
+                                    .map(f -> f.replace(patt, "")).collect(Collectors.joining());
+                            return new DataEntity()
+                                    .type(DataEntityType.FILE)
+                                    .oddrn(fileGenerator(namespace, uri.getPath(), fileName));
+                        })
+                .collect(Collectors.toList());
+    }
+
+    private List<DataEntity> handleJdbcRelation(JDBCRelation relation) {
+
+        var url = relation.jdbcOptions().url();
+        var tableOrQuery = relation.jdbcOptions().tableOrQuery();
+        var tables = extractTableNames(tableOrQuery);
+        if (tables.isEmpty()) {
+            return Collections.singletonList(DataEntityMapper.map(null, url, tableOrQuery));
+        }
+        return tables.stream().map(tableName -> DataEntityMapper.map(tableOrQuery, url, tableName)).collect(Collectors.toList());
+    }
+
+    private List<String> extractTableNames(String tableOrQuery) {
+        try {
+            var sql = tableOrQuery.substring(tableOrQuery.indexOf("(") + 1, tableOrQuery.indexOf(")"));
+            var statement = CCJSqlParserUtil.parse(sql);
+            return new TablesNamesFinder().getTableList(statement);
+        } catch (StringIndexOutOfBoundsException ignored) {
+            log.info("JdbcRelation table found: {}", tableOrQuery);
+        } catch (JSQLParserException e) {
+            log.warn("JDBCRelation ", e);
+        }
+        return Collections.emptyList();
+    }
 }
