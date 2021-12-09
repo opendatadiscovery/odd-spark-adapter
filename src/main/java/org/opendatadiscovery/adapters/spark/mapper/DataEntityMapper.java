@@ -77,7 +77,11 @@ public class DataEntityMapper {
     public static DataEntity map(SparkListenerJobStart jobStart) {
         var properties = jobStart.properties();
         var job = properties.getProperty(SPARK_APP_NAME);
-        var host = properties.getProperty(SPARK_MASTER).split("://")[1].split(":")[0];
+        var host = Optional.ofNullable(properties.getProperty(SPARK_MASTER))
+                .map(s -> s.split("://"))
+                .map(s -> s.length > 1 ? s[1] : s[0])
+                .map(s -> s.split(":")[0])
+                .orElse(null);
         var run = properties.getProperty(SPARK_APP_ID);
         try {
             Map props = properties;

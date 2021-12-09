@@ -15,6 +15,9 @@ import java.util.Optional;
 @Slf4j
 public class Utils {
 
+    public static String CAMEL_TO_SNAKE_CASE =
+            "[\\s\\-_]?((?<=.)[A-Z](?=[a-z\\s\\-_])|(?<=[^A-Z])[A-Z]|((?<=[\\s\\-_])[a-z\\d]))";
+
     public static String namespaceUri(URI outputPath) {
         return Optional.ofNullable(outputPath.getAuthority())
                 .map(a -> String.format("%s://%s", outputPath.getScheme(), a))
