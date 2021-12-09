@@ -18,23 +18,33 @@ import org.apache.spark.scheduler.ActiveJob;
 import org.apache.spark.scheduler.ResultStage;
 import org.apache.spark.util.SerializableJobConf;
 import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
+import org.opendatadiscovery.client.model.DataEntity;
+import org.opendatadiscovery.client.model.DataEntityType;
 import scala.Function2;
 import scala.collection.JavaConversions;
 import scala.collection.Seq;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.URI;
-import java.util.*;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Locale;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.stream.Collectors;
 
 import static org.opendatadiscovery.adapters.spark.utils.Utils.CAMEL_TO_SNAKE_CASE;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.namespaceUri;
 
 @Slf4j
 public class RddMapper {
 
-    private RddMapper() {}
-
-    public static String name(RDD<?> rdd) {
+    public String name(RDD<?> rdd) {
         var rddName = (String) rdd.name();
         if (rddName == null
                 // HadoopRDDs are always named for the path. Don't name the RDD for a file. Otherwise, the
@@ -56,16 +66,15 @@ public class RddMapper {
                             .replaceAll(CAMEL_TO_SNAKE_CASE, "_$1") // camel case to snake case
                             .toLowerCase(Locale.ROOT);
         }
-        Seq<Dependency<?>> deps = (Seq<Dependency<?>>) rdd.dependencies();
-        List<Dependency<?>> dependencies = ScalaConversionUtils.fromSeq(deps);
+        var deps = (Seq<Dependency<?>>) rdd.dependencies();
+        var dependencies = ScalaConversionUtils.fromSeq(deps);
         if (dependencies.isEmpty()) {
             return rddName;
         }
-        List<String> dependencyNames = new ArrayList<>();
-        for (Dependency d : dependencies) {
-            dependencyNames.add(name(d.rdd()));
-        }
-        String dependencyName = Strings.join(dependencyNames, "_");
+        var dependencyNames = dependencies.stream()
+                .map(d -> name(d.rdd()))
+                .collect(Collectors.toList());
+        var dependencyName = Strings.join(dependencyNames, "_");
         if (!dependencyName.startsWith(rddName)) {
             return rddName + "_" + dependencyName;
         } else {
@@ -73,21 +82,26 @@ public class RddMapper {
         }
     }
 
-    public static List<URI> inputs(RDD<?> finalRdd) {
+    public List<DataEntity> inputs(RDD<?> finalRdd) {
         var rdds = flatten(finalRdd);
-        List<URI> result = new ArrayList<>();
+        List<DataEntity> result = new ArrayList<>();
         for (RDD<?> rdd : rdds) {
             Path[] inputPaths = getInputPaths(rdd);
             if (inputPaths != null) {
                 for (Path path : inputPaths) {
-                    result.add(path.toUri());
+                    var uri = path.toUri();
+                    var namespace = namespaceUri(uri);
+                    result.add(new DataEntity()
+                            .type(DataEntityType.FILE)
+                            .oddrn(fileGenerator(namespace, uri.getPath(), null))
+                    );
                 }
             }
         }
         return result;
     }
 
-    public static List<URI> outputs(ActiveJob job, Configuration config) {
+    public List<DataEntity> outputs(ActiveJob job, Configuration config) {
         Configuration jc = new JobConf();
         if (job.finalStage() instanceof ResultStage) {
             Function2<TaskContext, scala.collection.Iterator<?>, ?> fn = ((ResultStage) job.finalStage()).func();
@@ -118,12 +132,17 @@ public class RddMapper {
         var outputPath = getOutputPath(jc);
         log.info("Found output path {} from RDD {}", outputPath, job.finalStage().rdd());
         if (outputPath != null) {
-            return Collections.singletonList(outputPath.toUri());
+            var uri = outputPath.toUri();
+            var namespace = namespaceUri(uri);
+            return Collections.singletonList(new DataEntity()
+                    .type(DataEntityType.FILE)
+                    .oddrn(fileGenerator(namespace, uri.getPath(), null))
+            );
         }
         return Collections.emptyList();
     }
 
-    private static Path getOutputPath(Configuration config) {
+    private Path getOutputPath(Configuration config) {
         if (config == null) {
             return null;
         }
@@ -145,7 +164,7 @@ public class RddMapper {
         return path;
     }
 
-    private static Field getConfigField(Function2<TaskContext, scala.collection.Iterator<?>, ?> fn)
+    private Field getConfigField(Function2<TaskContext, scala.collection.Iterator<?>, ?> fn)
             throws NoSuchFieldException {
         try {
             return fn.getClass().getDeclaredField("config$1");
@@ -154,7 +173,7 @@ public class RddMapper {
         }
     }
 
-    private static Set<RDD<?>> flatten(RDD<?> rdd) {
+    private Set<RDD<?>> flatten(RDD<?> rdd) {
         Set<RDD<?>> rdds = new HashSet<>();
         rdds.add(rdd);
         Collection<Dependency<?>> deps = JavaConversions.asJavaCollection(rdd.dependencies());
@@ -164,7 +183,7 @@ public class RddMapper {
         return rdds;
     }
 
-    private static Path[] getInputPaths(RDD<?> rdd) {
+    private Path[] getInputPaths(RDD<?> rdd) {
         Path[] inputPaths = null;
         if (rdd instanceof HadoopRDD) {
             inputPaths =
