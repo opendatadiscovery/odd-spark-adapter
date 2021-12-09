@@ -26,12 +26,11 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.List;
 import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.stream.Collectors;
@@ -81,24 +80,20 @@ public class RddMapper {
 
     public List<URI> inputs(RDD<?> finalRdd) {
         var rdds = flatten(finalRdd);
-        List<URI> result = new ArrayList<>();
-        for (RDD<?> rdd : rdds) {
-            Path[] inputPaths = getInputPaths(rdd);
-            if (inputPaths != null) {
-                for (Path path : inputPaths) {
-                    result.add(path.toUri());
-                }
-            }
-        }
-        return result;
+        return rdds.stream()
+                .map(this::getInputPaths)
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .map(Path::toUri)
+                .collect(Collectors.toList());
     }
 
     public List<URI> outputs(ActiveJob job, Configuration config) {
         Configuration jc = new JobConf();
         if (job.finalStage() instanceof ResultStage) {
-            Function2<TaskContext, scala.collection.Iterator<?>, ?> fn = ((ResultStage) job.finalStage()).func();
+            var fn = ((ResultStage) job.finalStage()).func();
             try {
-                Field f = getConfigField(fn);
+                var f = getConfigField(fn);
                 f.setAccessible(true);
 
                 var configUtil =
@@ -110,9 +105,9 @@ public class RddMapper {
                                                 new NoSuchFieldException(
                                                         "Field is not instance of HadoopMapRedWriteConfigUtil"));
 
-                Field confField = HadoopMapRedWriteConfigUtil.class.getDeclaredField("conf");
+                var confField = HadoopMapRedWriteConfigUtil.class.getDeclaredField("conf");
                 confField.setAccessible(true);
-                SerializableJobConf conf = (SerializableJobConf) confField.get(configUtil);
+                var conf = (SerializableJobConf) confField.get(configUtil);
                 jc = conf.value();
             } catch (IllegalAccessException | NoSuchFieldException nfe) {
                 log.warn("Unable to access job conf from RDD", nfe);
@@ -163,28 +158,27 @@ public class RddMapper {
     private Set<RDD<?>> flatten(RDD<?> rdd) {
         Set<RDD<?>> rdds = new HashSet<>();
         rdds.add(rdd);
-        Collection<Dependency<?>> deps = JavaConversions.asJavaCollection(rdd.dependencies());
+        var deps = JavaConversions.asJavaCollection(rdd.dependencies());
         for (Dependency<?> dep : deps) {
             rdds.addAll(flatten(dep.rdd()));
         }
         return rdds;
     }
 
-    private Path[] getInputPaths(RDD<?> rdd) {
-        Path[] inputPaths = null;
+    private List<Path> getInputPaths(RDD<?> rdd) {
         if (rdd instanceof HadoopRDD) {
-            inputPaths =
+            return List.of(
                     org.apache.hadoop.mapred.FileInputFormat.getInputPaths(
-                            ((HadoopRDD<?, ?>) rdd).getJobConf());
+                            ((HadoopRDD<?, ?>) rdd).getJobConf()));
         } else if (rdd instanceof NewHadoopRDD) {
             try {
-                inputPaths =
+                return List.of(
                         org.apache.hadoop.mapreduce.lib.input.FileInputFormat.getInputPaths(
-                                new Job(((NewHadoopRDD<?, ?>) rdd).getConf()));
+                                new Job(((NewHadoopRDD<?, ?>) rdd).getConf())));
             } catch (IOException e) {
                 log.error("ODD spark agent could not get input paths", e);
             }
         }
-        return inputPaths;
+        return null;
     }
 }
