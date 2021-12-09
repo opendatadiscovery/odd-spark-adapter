@@ -177,11 +177,13 @@ public class OddAdapterSparkListener extends SparkListener {
                                 var finalRDD = job.finalStage().rdd();
                                 var rddMapper = new RddMapper();
                                 var jobSuffix = rddMapper.name(finalRDD);
-                                this.inputs.addAll(rddMapper.inputs(finalRDD));
-                                this.outputs.addAll(
-                                        rddMapper.outputs(job, OddAdapterSparkListener.getConfigForRDD(finalRDD))
-                                );
-                                log.info("RDD jobId={} jobSuffix={}", job.jobId(), jobSuffix);
+                                var rddInputs = rddMapper.inputs(finalRDD);
+                                this.inputs.addAll(rddInputs);
+                                var rddOutputs = rddMapper.outputs(job,
+                                        OddAdapterSparkListener.getConfigForRDD(finalRDD));
+                                this.outputs.addAll(rddOutputs);
+                                log.info("RDD jobId={} jobSuffix={} rddInputs={} rddOutputs={}",
+                                        job.jobId(), jobSuffix, rddInputs, rddOutputs);
                             }
                         });
     }
