@@ -42,6 +42,6 @@ public class DataEntityMapperTest {
         when(jobStart.properties().getProperty(DataEntityMapper.SPARK_MASTER)).thenReturn("spark://spark-master:7077");
         when(jobStart.properties().getProperty(DataEntityMapper.SPARK_APP_NAME)).thenReturn("etl-app");
         when(jobStart.properties().getProperty(DataEntityMapper.SPARK_APP_ID)).thenReturn("app-20211204075250-0013");
-        return DataEntityMapper.map(jobStart);
+        return DataEntityMapper.map(jobStart.properties());
     }
 }

@@ -1,7 +1,5 @@
 package org.opendatadiscovery.adapters.spark.mapper;
 
-import org.apache.spark.scheduler.SparkListenerJobStart;
-
 import org.opendatadiscovery.adapters.spark.utils.Utils;
 import org.opendatadiscovery.client.model.DataEntity;
 import org.opendatadiscovery.client.model.DataEntityList;
@@ -21,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 import static java.time.ZoneOffset.UTC;
@@ -33,6 +32,7 @@ public class DataEntityMapper {
     public static final String SPARK_APP_NAME = "spark.app.name";
     public static final String SPARK_MASTER = "spark.master";
     public static final String SPARK_APP_ID = "spark.app.id";
+    public static final String SPARK_APP_START_TIME = "spark.app.startTime";
 
     private DataEntityMapper() {}
 
@@ -77,8 +77,7 @@ public class DataEntityMapper {
                 .oddrn(Utils.sqlGenerator(url, tableName));
     }
 
-    public static DataEntity map(SparkListenerJobStart jobStart) {
-        var properties = jobStart.properties();
+    public static DataEntity map(Properties properties) {
         var job = properties.getProperty(SPARK_APP_NAME);
         var host = Optional.ofNullable(properties.getProperty(SPARK_MASTER))
                 .map(s -> s.split("://"))
@@ -88,7 +87,8 @@ public class DataEntityMapper {
         var run = properties.getProperty(SPARK_APP_ID);
         try {
             Map props = properties;
-            var startTime = OffsetDateTime.ofInstant(Instant.ofEpochMilli(jobStart.time()), UTC);
+            var startTime = OffsetDateTime
+                    .ofInstant(Instant.ofEpochMilli(Long.parseLong(properties.getProperty(SPARK_APP_START_TIME))), UTC);
             return new DataEntity()
                     .name(run)
                     .createdAt(startTime)

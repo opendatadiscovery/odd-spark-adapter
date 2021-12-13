@@ -69,6 +69,7 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
     }
 
     private List<DataEntity> handleHadoopFsRelation(HadoopFsRelation relation) {
+        log.info("fs.s3a.endpoint: {}", context.hadoopConfiguration().get("fs.s3a.endpoint"));
         return JavaConversions.asJavaCollection(relation.location().rootPaths()).stream()
                 .map(p -> Utils.getDirectoryPath(p, context.hadoopConfiguration()))
                 .distinct()
@@ -78,10 +79,12 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
                             // static partitions in the relation
                             var uri = path.toUri();
                             var namespace = Utils.namespaceUri(uri);
-                            var patt = String.format("%s://%s", namespace, uri.getPath());
+                            log.info("handleHadoopFsRelation NAMESPACE: {}", namespace);
                             var fileName = Arrays.stream(relation.location().inputFiles())
-                                    .filter(f -> f.contains(patt))
-                                    .map(f -> f.replace(patt, "")).collect(Collectors.joining());
+                                    .peek(f -> log.info("handleHadoopFsRelation FILE: {}", f))
+                                    .filter(f -> f.contains(namespace))
+                                    .map(f -> f.replace(namespace, "")).collect(Collectors.joining());
+                            log.info("handleHadoopFsRelation FILENAME: {}", fileName);
                             return new DataEntity()
                                     .type(DataEntityType.FILE)
                                     .oddrn(fileGenerator(namespace, uri.getPath(), fileName));

@@ -63,3 +63,12 @@ To start ETL job using SparkAgent
 --driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar=http://host.docker.internal:8080" \
 /opt/spark-apps/mysql_pg_job.py
 ```
+
+```sh
+./spark-submit \
+--master spark://spark-master:7077 \
+--driver-memory 1G \
+--executor-memory 1G \
+--driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar=http://host.docker.internal:8080" \
+/opt/spark-apps/word_count.py
+```

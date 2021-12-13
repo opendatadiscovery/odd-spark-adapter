@@ -36,12 +36,15 @@ import org.springframework.http.ResponseEntity;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.WeakHashMap;
+import java.util.stream.Collectors;
 
 import static org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils.findSparkConfigKey;
 import static java.time.ZoneOffset.UTC;
@@ -66,12 +69,18 @@ public class OddAdapterSparkListener extends SparkListener {
 
     @SuppressWarnings("unused")
     public static void instrument(SparkContext context) {
+        var props = context.conf().toDebugString();
         log.info(
                 "Initialized ODD listener with \nspark version: {}\njava.version: {}\nconfiguration: {}",
                 context.version(),
                 System.getProperty("java.version"),
-                context.conf().toDebugString());
+                props);
+        var properties = new Properties();
+        properties.putAll(Arrays.stream(props.split("\n"))
+                .map(l -> l.split("="))
+                .collect(Collectors.toMap(e -> e[0], e -> (Object)(e.length > 1 ? e[1] : ""))));
         OddAdapterSparkListener listener = new OddAdapterSparkListener();
+        listener.dataEntity = DataEntityMapper.map(properties);
         context.addSparkListener(listener);
     }
 
@@ -171,9 +180,14 @@ public class OddAdapterSparkListener extends SparkListener {
                                 long executionId = Long.parseLong(executionIdProp);
                                 log.info("{}: {}", SPARK_SQL_EXECUTION_ID, executionId);
                                 if (dataEntity == null) {
-                                    dataEntity = DataEntityMapper.map(jobStart);
+                                    dataEntity = DataEntityMapper.map(jobStart.properties());
+                                } else {
+                                    addProperties(jobStart.properties());
                                 }
                             } else {
+                                if (dataEntity != null) {
+                                    addProperties(jobStart.properties());
+                                }
                                 var finalRDD = job.finalStage().rdd();
                                 var rddMapper = new RddMapper();
                                 var jobSuffix = rddMapper.name(finalRDD);
@@ -197,6 +211,12 @@ public class OddAdapterSparkListener extends SparkListener {
         } else if (event instanceof SparkListenerSQLExecutionEnd) {
             sparkSQLExecEnd((SparkListenerSQLExecutionEnd) event);
         }
+    }
+
+    private void addProperties(Properties properties) {
+        Map props = properties;
+        dataEntity.getMetadata().get(0).getMetadata()
+                .putAll((Map<String, Object>) props);
     }
 
     /**
