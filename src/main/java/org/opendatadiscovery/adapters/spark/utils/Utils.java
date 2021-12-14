@@ -5,6 +5,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.opendatadiscovery.oddrn.Generator;
 import org.opendatadiscovery.oddrn.JdbcUrlParser;
+import org.opendatadiscovery.oddrn.model.AwsS3Path;
 import org.opendatadiscovery.oddrn.model.MysqlPath;
 import org.opendatadiscovery.oddrn.model.PostgreSqlPath;
 
@@ -15,6 +16,9 @@ import java.util.Optional;
 @Slf4j
 public class Utils {
 
+    public static final String S_3_A_ENDPOINT = "fs.s3a.endpoint";
+    public static final String AMAZON_COM = ".amazon.com";
+    public static final String S3A = "s3a://";
     public static String CAMEL_TO_SNAKE_CASE =
             "[\\s\\-_]?((?<=.)[A-Z](?=[a-z\\s\\-_])|(?<=[^A-Z])[A-Z]|((?<=[\\s\\-_])[a-z\\d]))";
 
@@ -60,7 +64,22 @@ public class Utils {
     }
 
     //TODO use oddrn generator
-    public static String fileGenerator(String namespace, String path, String fileName) {
-        return "//" + namespace + path + (fileName == null ? "" : fileName);
+    public static String fileGenerator(String namespace, String file) {
+        return "//" + namespace + file.replace(namespace + ":/", "");
+    }
+
+    public static String s3Generator(Configuration hadoopConfig, String namespace, String key) {
+        var endpoint = hadoopConfig.get(S_3_A_ENDPOINT);
+        log.info("{}: {}", S_3_A_ENDPOINT, endpoint);
+        var region = endpoint.contains(AMAZON_COM)
+                ? endpoint.replace(AMAZON_COM, "") : "default";
+        try {
+            return new Generator().generate(AwsS3Path.builder()
+                    .region(region)
+                    .bucket(namespace.replace(S3A, ""))
+                    .key(key.replace(namespace, "")).build(), "key");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

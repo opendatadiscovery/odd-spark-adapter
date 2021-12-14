@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.s3Generator;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.S3A;
 
 
 @Slf4j
@@ -69,25 +71,26 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
     }
 
     private List<DataEntity> handleHadoopFsRelation(HadoopFsRelation relation) {
-        log.info("fs.s3a.endpoint: {}", context.hadoopConfiguration().get("fs.s3a.endpoint"));
         return JavaConversions.asJavaCollection(relation.location().rootPaths()).stream()
                 .map(p -> Utils.getDirectoryPath(p, context.hadoopConfiguration()))
                 .distinct()
                 .map(
                         path -> {
-                            // TODO- refactor this to return a single partitioned dataset based on static
-                            // static partitions in the relation
                             var uri = path.toUri();
                             var namespace = Utils.namespaceUri(uri);
                             log.info("handleHadoopFsRelation NAMESPACE: {}", namespace);
-                            var fileName = Arrays.stream(relation.location().inputFiles())
-                                    .peek(f -> log.info("handleHadoopFsRelation FILE: {}", f))
+                            var file = Arrays.stream(relation.location().inputFiles())
                                     .filter(f -> f.contains(namespace))
-                                    .map(f -> f.replace(namespace, "")).collect(Collectors.joining());
-                            log.info("handleHadoopFsRelation FILENAME: {}", fileName);
+                                    .collect(Collectors.joining());
+                            log.info("handleHadoopFsRelation FILE: {}", file);
+                            if (namespace.contains(S3A)) {
+                                return new DataEntity()
+                                        .type(DataEntityType.FILE)
+                                        .oddrn(s3Generator(context.hadoopConfiguration(), namespace, file));
+                            }
                             return new DataEntity()
                                     .type(DataEntityType.FILE)
-                                    .oddrn(fileGenerator(namespace, uri.getPath(), fileName));
+                                    .oddrn(fileGenerator(namespace, file));
                         })
                 .collect(Collectors.toList());
     }

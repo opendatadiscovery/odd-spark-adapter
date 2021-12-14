@@ -1,5 +1,13 @@
 package org.opendatadiscovery.adapters.spark;
 
+import org.apache.spark.scheduler.SparkListener;
+import org.apache.spark.scheduler.SparkListenerApplicationStart;
+import org.apache.spark.scheduler.SparkListenerApplicationEnd;
+import org.apache.spark.scheduler.SparkListenerJobEnd;
+import org.apache.spark.scheduler.JobFailed;
+import org.apache.spark.scheduler.SparkListenerJobStart;
+import org.apache.spark.scheduler.SparkListenerEvent;
+import org.apache.spark.scheduler.ActiveJob;
 import org.opendatadiscovery.adapters.spark.mapper.DataEntityMapper;
 import org.opendatadiscovery.adapters.spark.mapper.RddMapper;
 import org.opendatadiscovery.adapters.spark.plan.QueryPlanVisitor;
@@ -13,13 +21,6 @@ import org.apache.spark.SparkEnv$;
 
 import org.apache.spark.rdd.PairRDDFunctions;
 import org.apache.spark.rdd.RDD;
-import org.apache.spark.scheduler.SparkListenerApplicationStart;
-import org.apache.spark.scheduler.SparkListenerApplicationEnd;
-import org.apache.spark.scheduler.SparkListener;
-import org.apache.spark.scheduler.SparkListenerJobEnd;
-import org.apache.spark.scheduler.SparkListenerJobStart;
-import org.apache.spark.scheduler.JobFailed;
-import org.apache.spark.scheduler.SparkListenerEvent;
 
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
@@ -165,6 +166,12 @@ public class OddAdapterSparkListener extends SparkListener {
     public void onJobStart(SparkListenerJobStart jobStart) {
         jobCount += 1;
         log.info("onJobStart#{} {}", jobCount, jobStart.properties());
+        if (dataEntity == null) {
+            dataEntity = DataEntityMapper.map(jobStart.properties());
+        } else {
+            Map props = jobStart.properties();
+            dataEntity.getMetadata().get(0).getMetadata().putAll((Map<String, Object>) props);
+        }
         ScalaConversionUtils.asJavaOptional(
                 SparkSession.getActiveSession()
                         .map(ScalaConversionUtils.toScalaFn(SparkSession::sparkContext))
@@ -179,25 +186,8 @@ public class OddAdapterSparkListener extends SparkListener {
                             if (executionIdProp != null) {
                                 long executionId = Long.parseLong(executionIdProp);
                                 log.info("{}: {}", SPARK_SQL_EXECUTION_ID, executionId);
-                                if (dataEntity == null) {
-                                    dataEntity = DataEntityMapper.map(jobStart.properties());
-                                } else {
-                                    addProperties(jobStart.properties());
-                                }
                             } else {
-                                if (dataEntity != null) {
-                                    addProperties(jobStart.properties());
-                                }
-                                var finalRDD = job.finalStage().rdd();
-                                var rddMapper = new RddMapper();
-                                var jobSuffix = rddMapper.name(finalRDD);
-                                var rddInputs = rddMapper.inputs(finalRDD);
-                                this.inputs.addAll(DataEntityMapper.map(rddInputs));
-                                var rddOutputs = rddMapper.outputs(job,
-                                        OddAdapterSparkListener.getConfigForRDD(finalRDD));
-                                this.outputs.addAll(DataEntityMapper.map(rddOutputs));
-                                log.info("RDD jobId={} jobSuffix={} rddInputs={} rddOutputs={}",
-                                        job.jobId(), jobSuffix, rddInputs, rddOutputs);
+                                sparkRDDExecStart(job);
                             }
                         });
     }
@@ -213,10 +203,20 @@ public class OddAdapterSparkListener extends SparkListener {
         }
     }
 
-    private void addProperties(Properties properties) {
-        Map props = properties;
-        dataEntity.getMetadata().get(0).getMetadata()
-                .putAll((Map<String, Object>) props);
+    private void sparkRDDExecStart(ActiveJob job) {
+        var finalRDD = job.finalStage().rdd();
+        log.info("RDD S3_ENDPOINT: {}",
+                Optional.ofNullable(finalRDD.context().hadoopConfiguration())
+                        .map(h -> h.get("fs.s3a.endpoint")).orElse(""));
+        var rddMapper = new RddMapper();
+        var jobSuffix = rddMapper.name(finalRDD);
+        var rddInputs = rddMapper.inputs(finalRDD);
+        this.inputs.addAll(DataEntityMapper.map(rddInputs));
+        var rddOutputs = rddMapper.outputs(job,
+                OddAdapterSparkListener.getConfigForRDD(finalRDD));
+        this.outputs.addAll(DataEntityMapper.map(rddOutputs));
+        log.info("RDD jobId={} jobSuffix={} rddInputs={} rddOutputs={}",
+                job.jobId(), jobSuffix, rddInputs, rddOutputs);
     }
 
     /**

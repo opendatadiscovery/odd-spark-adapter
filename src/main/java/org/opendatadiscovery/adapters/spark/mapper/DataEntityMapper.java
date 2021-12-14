@@ -33,12 +33,13 @@ public class DataEntityMapper {
     public static final String SPARK_MASTER = "spark.master";
     public static final String SPARK_APP_ID = "spark.app.id";
     public static final String SPARK_APP_START_TIME = "spark.app.startTime";
+    private static final String JOBS = "/jobs";
 
     private DataEntityMapper() {}
 
     public static DataEntityList map(DataEntity dataEntity, List<DataEntity> inputs, List<DataEntity> outputs) {
         return new DataEntityList()
-                .dataSourceOddrn(dataEntity.getOddrn().split("/jobs")[0])
+                .dataSourceOddrn(dataEntity.getOddrn().split(JOBS)[0])
                 .addItemsItem(DataEntityMapper
                         .map(dataEntity)
                         .dataTransformer(
@@ -65,7 +66,7 @@ public class DataEntityMapper {
         return new DataEntity()
                 .metadata(dataEntity.getMetadata())
                 .createdAt(dataEntity.getCreatedAt())
-                .name(transformerRun.getTransformerOddrn().split("jobs/")[1])
+                .name(transformerRun.getTransformerOddrn().split(JOBS)[1])
                 .type(DataEntityType.JOB)
                 .oddrn(transformerRun.getTransformerOddrn());
     }
@@ -117,7 +118,7 @@ public class DataEntityMapper {
         var namespace = namespaceUri(uri);
         return new DataEntity()
                 .type(DataEntityType.FILE)
-                .oddrn(fileGenerator(namespace, uri.getPath(), null));
+                .oddrn(fileGenerator(namespace, uri.getPath()));
     }
 
     public static List<DataEntity> map(List<URI> uris) {
