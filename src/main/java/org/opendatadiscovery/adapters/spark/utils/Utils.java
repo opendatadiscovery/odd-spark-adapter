@@ -3,6 +3,7 @@ package org.opendatadiscovery.adapters.spark.utils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.spark.SparkContext;
 import org.opendatadiscovery.oddrn.Generator;
 import org.opendatadiscovery.oddrn.JdbcUrlParser;
 import org.opendatadiscovery.oddrn.model.AwsS3Path;
@@ -16,7 +17,7 @@ import java.util.Optional;
 @Slf4j
 public class Utils {
 
-    public static final String S_3_A_ENDPOINT = "fs.s3a.endpoint";
+    public static final String S3A_ENDPOINT = "fs.s3a.endpoint";
     public static final String AMAZON_COM = ".amazon.com";
     public static final String S3A = "s3a://";
     public static String CAMEL_TO_SNAKE_CASE =
@@ -68,9 +69,12 @@ public class Utils {
         return "//" + namespace + file.replace(namespace + ":/", "");
     }
 
-    public static String s3Generator(Configuration hadoopConfig, String namespace, String key) {
-        var endpoint = hadoopConfig.get(S_3_A_ENDPOINT);
-        log.info("{}: {}", S_3_A_ENDPOINT, endpoint);
+    public static String s3Generator(String namespace, String key) {
+        var endpoint = Optional
+                //Think about to make SparkContext global or in dedicated context
+                .ofNullable(SparkContext.getOrCreate().hadoopConfiguration()).map(h -> h.get(S3A_ENDPOINT))
+                .orElse("");
+        log.info("{}: {}", S3A_ENDPOINT, endpoint);
         var region = endpoint.contains(AMAZON_COM)
                 ? endpoint.replace(AMAZON_COM, "") : "default";
         try {

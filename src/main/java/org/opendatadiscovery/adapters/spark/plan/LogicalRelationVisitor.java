@@ -76,17 +76,14 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
                 .distinct()
                 .map(
                         path -> {
-                            var uri = path.toUri();
-                            var namespace = Utils.namespaceUri(uri);
-                            log.info("handleHadoopFsRelation NAMESPACE: {}", namespace);
+                            var namespace = Utils.namespaceUri(path.toUri());
                             var file = Arrays.stream(relation.location().inputFiles())
                                     .filter(f -> f.contains(namespace))
                                     .collect(Collectors.joining());
-                            log.info("handleHadoopFsRelation FILE: {}", file);
                             if (namespace.contains(S3A)) {
                                 return new DataEntity()
                                         .type(DataEntityType.FILE)
-                                        .oddrn(s3Generator(context.hadoopConfiguration(), namespace, file));
+                                        .oddrn(s3Generator(namespace, file));
                             }
                             return new DataEntity()
                                     .type(DataEntityType.FILE)

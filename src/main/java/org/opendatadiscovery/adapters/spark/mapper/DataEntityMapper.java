@@ -25,7 +25,9 @@ import java.util.stream.Collectors;
 import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.s3Generator;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.namespaceUri;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.S3A;
 
 public class DataEntityMapper {
 
@@ -116,9 +118,15 @@ public class DataEntityMapper {
 
     public static DataEntity map(URI uri) {
         var namespace = namespaceUri(uri);
+        var file = uri.getPath();
+        if (namespace.contains(S3A)) {
+            return new DataEntity()
+                    .type(DataEntityType.FILE)
+                    .oddrn(s3Generator(namespace, file));
+        }
         return new DataEntity()
                 .type(DataEntityType.FILE)
-                .oddrn(fileGenerator(namespace, uri.getPath()));
+                .oddrn(fileGenerator(namespace, file));
     }
 
     public static List<DataEntity> map(List<URI> uris) {
