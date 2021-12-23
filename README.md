@@ -6,16 +6,15 @@ ODD Spark Adapter
 Implementation inspired by
 [Marquez Spark integration](https://github.com/MarquezProject/marquez/tree/main/integrations/spark).
 
-Both spark listener and java agent are currently needed to capture everything. 
 With listener only, it will not be able to track job outputs.
 
 # Roadmap
 
 Further development may include:
 * Features
-  * Support Spark SQL
   * Support for capturing meaningful information for more inputs/outputs 
     types Spark has support for, e.g.:
+    * Kafka
     * HBase
     * Hudi tables
     * etc.
@@ -27,11 +26,7 @@ Further development may include:
     * from Scala, from Python, from Java
     * etc.
 * Technical excellence improvement 
-  * More unit tests
-* Probably better design of `oddrn`s, ways to represent inputs/outputs etc.
-  * Every time job is submitted to Spark, there is both JOB and JOB_RUN
-  * Make sure data gathered is as meaningful in a long term as possible vs 
-    only meaningful in a short time after when job is run  
+  * Unit tests
 
 # Development
 
@@ -39,28 +34,41 @@ Further development may include:
 ```sh
 mvn clean package -dskipTests
 ```
-This creates `agent.jar` and `example.jar`. 
 
-## Run examples
+`spark.odd.host.url` used to specify ODD platform host url.
 
+## To run in docker
+
+`docker build -t cluster-apache-spark:3.0.2 .`
+
+`docker-compose up -d`
+
+To start ETL job using OddAdapterSparkListener
 ```sh
-spark-submit --class com.provectus.odd.adapters.spark.examples.WordCount \
---master "local[2]" \
---driver-java-options "-javaagent:target/agent.jar" \
---jars target/agent.jar target/example.jar \
-pom.xml target/words.txt
+./spark-submit \
+--master spark://spark-master:7077 \
+--jars /opt/spark-apps/postgresql-42.2.22.jar,/opt/spark-apps/mysql-connector-java-8.0.26.jar,/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar \
+--driver-memory 1G --executor-memory 1G \
+--conf spark.extraListeners=org.opendatadiscovery.adapters.spark.OddAdapterSparkListener \
+--conf spark.odd.host.url=http://host.docker.internal:8080  \
+/opt/spark-apps/mysql_pg_job.py
+```
+To start ETL job using SparkAgent
+```sh
+./spark-submit \
+--master spark://spark-master:7077 \
+--driver-memory 1G \
+--executor-memory 1G \
+--jars /opt/spark-apps/postgresql-42.2.22.jar,/opt/spark-apps/mysql-connector-java-8.0.26.jar \
+--driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar=http://host.docker.internal:8080" \
+/opt/spark-apps/mysql_pg_job.py
 ```
 
-This example shows client configuration:
 ```sh
-spark-submit \
---class com.provectus.odd.adapters.spark.examples.Pi \
---master "local[2]" \
---driver-java-options "-javaagent:target/agent.jar" \
---conf opendatadiscovery.endpoint=http://localhost:8080/ingestion/entities \
---jars target/agent.jar target/example.jar \
-10 target/pi_out
+./spark-submit \
+--master spark://spark-master:7077 \
+--driver-memory 1G \
+--executor-memory 1G \
+--driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar=http://host.docker.internal:8080" \
+/opt/spark-apps/word_count.py
 ```
-
-`opendatadiscovery.endpoint` used to specify endpoint to 
-report DataProcessor/DataProcessorRun to platform.
