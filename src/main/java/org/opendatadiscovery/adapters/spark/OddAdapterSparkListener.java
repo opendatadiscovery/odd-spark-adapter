@@ -48,8 +48,8 @@ import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 
 import static org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils.findSparkConfigKey;
-import static org.opendatadiscovery.adapters.spark.utils.Utils.S3A_ENDPOINT;
 import static java.time.ZoneOffset.UTC;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.*;
 
 
 @Slf4j
@@ -206,9 +206,7 @@ public class OddAdapterSparkListener extends SparkListener {
 
     private void sparkRDDExecStart(ActiveJob job) {
         var finalRDD = job.finalStage().rdd();
-        log.info("RDD S3_ENDPOINT: {}",
-                Optional.ofNullable(finalRDD.context().hadoopConfiguration())
-                        .map(h -> h.get(S3A_ENDPOINT)).orElse(""));
+        log.info("RDD S3_ENDPOINT: {}",s3endpoint(S3A_ENDPOINT).orElse(s3endpoint(S3N_ENDPOINT).orElse("")));
         var rddMapper = new RddMapper();
         var jobSuffix = rddMapper.name(finalRDD);
         var rddInputs = rddMapper.inputs(finalRDD);

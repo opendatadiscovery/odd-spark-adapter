@@ -7,6 +7,7 @@ import org.apache.spark.SparkContext;
 import org.opendatadiscovery.oddrn.Generator;
 import org.opendatadiscovery.oddrn.JdbcUrlParser;
 import org.opendatadiscovery.oddrn.model.AwsS3Path;
+import org.opendatadiscovery.oddrn.model.CustomS3Path;
 import org.opendatadiscovery.oddrn.model.MysqlPath;
 import org.opendatadiscovery.oddrn.model.PostgreSqlPath;
 
@@ -16,10 +17,11 @@ import java.util.Optional;
 
 @Slf4j
 public class Utils {
-
-    public static final String S3A_ENDPOINT = "fs.s3a.endpoint";
-    public static final String AMAZON_COM = ".amazon.com";
+    public static final String S3A_ENDPOINT = "fs.s3n.endpoint";
+    public static final String S3N_ENDPOINT = "fs.s3a.endpoint";
+    public static final String AMAZONAWS_COM = ".amazon.com";
     public static final String S3A = "s3a://";
+    public static final String S3N = "s3n://";
     public static String CAMEL_TO_SNAKE_CASE =
             "[\\s\\-_]?((?<=.)[A-Z](?=[a-z\\s\\-_])|(?<=[^A-Z])[A-Z]|((?<=[\\s\\-_])[a-z\\d]))";
 
@@ -70,20 +72,34 @@ public class Utils {
     }
 
     public static String s3Generator(String namespace, String key) {
-        var endpoint = Optional
-                //Think about to make SparkContext global or in dedicated context
-                .ofNullable(SparkContext.getOrCreate().hadoopConfiguration()).map(h -> h.get(S3A_ENDPOINT))
-                .orElse("");
-        log.info("{}: {}", S3A_ENDPOINT, endpoint);
-        var region = endpoint.contains(AMAZON_COM)
-                ? endpoint.replace(AMAZON_COM, "") : "default";
+        var bucket = "";
+        var endpoint = "";
+        if (namespace.contains(S3A)) {
+            bucket = namespace.replace(S3A, "");
+            endpoint = s3endpoint(S3A_ENDPOINT).orElse("");
+        } else {
+            bucket = namespace.replace(S3N, "");
+            endpoint = s3endpoint(S3N_ENDPOINT).orElse("");
+        }
+        log.info("fs.s3n.endpoint: {}", endpoint);
         try {
-            return new Generator().generate(AwsS3Path.builder()
-                    .region(region)
-                    .bucket(namespace.replace(S3A, ""))
+            if (endpoint.isEmpty() || endpoint.contains(AMAZONAWS_COM)) {
+                return new Generator().generate(AwsS3Path.builder()
+                        .bucket(bucket)
+                        .key(key.replace(namespace, "")).build(), "key");
+            }
+            return new Generator().generate(CustomS3Path.builder()
+                    .endpoint(endpoint)
+                    .bucket(bucket)
                     .key(key.replace(namespace, "")).build(), "key");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static Optional<String> s3endpoint(String key) {
+        return Optional
+                //Think about to make SparkContext global or in dedicated context
+                .ofNullable(SparkContext.getOrCreate().hadoopConfiguration()).map(h -> h.get(key));
     }
 }

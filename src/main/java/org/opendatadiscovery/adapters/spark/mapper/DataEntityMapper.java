@@ -28,6 +28,7 @@ import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.s3Generator;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.namespaceUri;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.S3A;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.S3N;
 
 public class DataEntityMapper {
 
@@ -116,10 +117,8 @@ public class DataEntityMapper {
         }
     }
 
-    public static DataEntity map(URI uri) {
-        var namespace = namespaceUri(uri);
-        var file = uri.getPath();
-        if (namespace.contains(S3A)) {
+    public static DataEntity map(String namespace, String file) {
+        if (namespace.contains(S3A) || namespace.contains(S3N)) {
             return new DataEntity()
                     .type(DataEntityType.FILE)
                     .oddrn(s3Generator(namespace, file));
@@ -129,7 +128,14 @@ public class DataEntityMapper {
                 .oddrn(fileGenerator(namespace, file));
     }
 
+    public static DataEntity map(URI uri) {
+        if (uri == null) {
+            return null;
+        }
+        return DataEntityMapper.map(namespaceUri(uri), uri.getPath());
+    }
+
     public static List<DataEntity> map(List<URI> uris) {
-        return uris.stream().map(DataEntityMapper::map).collect(Collectors.toList());
+        return uris.stream().map(DataEntityMapper::map).filter(Objects::nonNull).collect(Collectors.toList());
     }
 }
