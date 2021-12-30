@@ -76,3 +76,10 @@ services:
     restart: always
     ports:
       - 8787:8080
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: "server /data --console-address \":9001\""

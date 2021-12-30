@@ -17,8 +17,8 @@ import java.util.Optional;
 
 @Slf4j
 public class Utils {
-    public static final String S3A_ENDPOINT = "fs.s3n.endpoint";
-    public static final String S3N_ENDPOINT = "fs.s3a.endpoint";
+    public static final String S3A_ENDPOINT = "fs.s3a.endpoint";
+    public static final String S3N_ENDPOINT = "fs.s3n.endpoint";
     public static final String AMAZONAWS_COM = ".amazon.com";
     public static final String S3A = "s3a://";
     public static final String S3N = "s3n://";
@@ -71,7 +71,7 @@ public class Utils {
         return "//" + namespace + file.replace(namespace + ":/", "");
     }
 
-    public static String s3Generator(String namespace, String key) {
+    public static String s3Generator(String namespace, String path) {
         var bucket = "";
         var endpoint = "";
         if (namespace.contains(S3A)) {
@@ -81,17 +81,19 @@ public class Utils {
             bucket = namespace.replace(S3N, "");
             endpoint = s3endpoint(S3N_ENDPOINT).orElse("");
         }
-        log.info("fs.s3n.endpoint: {}", endpoint);
+        log.info("fs.s3.endpoint: {}", endpoint);
+        var key = path.replace(namespace, "");
+        key = key.startsWith("/") ? key.substring(1) : key;
         try {
             if (endpoint.isEmpty() || endpoint.contains(AMAZONAWS_COM)) {
                 return new Generator().generate(AwsS3Path.builder()
                         .bucket(bucket)
-                        .key(key.replace(namespace, "")).build(), "key");
+                        .key(key).build(), "key");
             }
             return new Generator().generate(CustomS3Path.builder()
                     .endpoint(endpoint)
                     .bucket(bucket)
-                    .key(key.replace(namespace, "")).build(), "key");
+                    .key(key).build(), "key");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
