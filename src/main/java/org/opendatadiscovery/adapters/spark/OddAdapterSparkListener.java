@@ -49,7 +49,9 @@ import java.util.stream.Collectors;
 
 import static org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils.findSparkConfigKey;
 import static java.time.ZoneOffset.UTC;
-import static org.opendatadiscovery.adapters.spark.utils.Utils.*;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.S3A_ENDPOINT;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.S3N_ENDPOINT;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.s3endpoint;
 
 
 @Slf4j
