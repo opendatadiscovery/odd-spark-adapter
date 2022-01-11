@@ -66,7 +66,6 @@ public class Utils {
         return "!" + url + "/" + tableName;
     }
 
-    //TODO use oddrn generator
     public static String fileGenerator(String namespace, String file) {
         return "//" + namespace + file.replace(namespace + ":/", "");
     }
