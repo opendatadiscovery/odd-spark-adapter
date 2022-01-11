@@ -101,7 +101,6 @@ public class Utils {
 
     public static Optional<String> s3endpoint(String key) {
         return Optional
-                //Think about to make SparkContext global or in dedicated context
                 .ofNullable(SparkContext.getOrCreate().hadoopConfiguration()).map(h -> h.get(key));
     }
 }
