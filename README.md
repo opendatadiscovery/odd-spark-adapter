@@ -72,3 +72,13 @@ To start ETL job using SparkAgent
 --driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar=http://host.docker.internal:8080" \
 /opt/spark-apps/word_count.py
 ```
+
+```sh
+./spark-submit \
+--master spark://spark-master:7077 \
+--driver-memory 1G \
+--executor-memory 1G \
+--driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar=http://host.docker.internal:8080" \
+--jars /opt/spark-apps/aws-java-sdk-bundle-1.11.874.jar,/opt/spark-apps/hadoop-aws-3.2.0.jar \
+/opt/spark-apps/s3-aws-word-count.py
+```

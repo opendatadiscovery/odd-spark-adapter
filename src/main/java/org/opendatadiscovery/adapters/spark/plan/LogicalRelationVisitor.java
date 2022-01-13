@@ -14,17 +14,12 @@ import org.apache.spark.sql.execution.datasources.HadoopFsRelation;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
 import org.opendatadiscovery.client.model.DataEntity;
-import org.opendatadiscovery.client.model.DataEntityType;
 import scala.collection.JavaConversions;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
-import static org.opendatadiscovery.adapters.spark.utils.Utils.s3Generator;
-import static org.opendatadiscovery.adapters.spark.utils.Utils.S3A;
 
 
 @Slf4j
@@ -80,14 +75,7 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
                             var file = Arrays.stream(relation.location().inputFiles())
                                     .filter(f -> f.contains(namespace))
                                     .collect(Collectors.joining());
-                            if (namespace.contains(S3A)) {
-                                return new DataEntity()
-                                        .type(DataEntityType.FILE)
-                                        .oddrn(s3Generator(namespace, file));
-                            }
-                            return new DataEntity()
-                                    .type(DataEntityType.FILE)
-                                    .oddrn(fileGenerator(namespace, file));
+                            return DataEntityMapper.map(namespace, file);
                         })
                 .collect(Collectors.toList());
     }
