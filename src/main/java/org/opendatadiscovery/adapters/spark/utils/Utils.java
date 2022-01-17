@@ -20,7 +20,7 @@ import java.util.Optional;
 public class Utils {
     public static final String S3A_ENDPOINT = "fs.s3a.endpoint";
     public static final String S3N_ENDPOINT = "fs.s3n.endpoint";
-    public static final String AMAZONAWS_COM = ".amazon.com";
+    public static final String AMAZONAWS_COM = ".amazonaws.com";
     public static final String S3A = "s3a://";
     public static final String S3N = "s3n://";
     public static final String HDFS = "hdfs://";
@@ -91,7 +91,6 @@ public class Utils {
             bucket = namespace.replace(S3N, "");
             endpoint = s3endpoint(S3N_ENDPOINT).orElse("");
         }
-        log.info("fs.s3.endpoint: {}", endpoint);
         var key = path.replace(namespace, "");
         key = key.startsWith("/") ? key.substring(1) : key;
         try {
