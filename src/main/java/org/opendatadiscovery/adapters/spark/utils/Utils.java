@@ -10,6 +10,7 @@ import org.opendatadiscovery.oddrn.model.AwsS3Path;
 import org.opendatadiscovery.oddrn.model.CustomS3Path;
 import org.opendatadiscovery.oddrn.model.MysqlPath;
 import org.opendatadiscovery.oddrn.model.PostgreSqlPath;
+import org.opendatadiscovery.oddrn.model.HdfsPath;
 
 import java.io.IOException;
 import java.net.URI;
@@ -22,6 +23,7 @@ public class Utils {
     public static final String AMAZONAWS_COM = ".amazon.com";
     public static final String S3A = "s3a://";
     public static final String S3N = "s3n://";
+    public static final String HDFS = "hdfs://";
     public static String CAMEL_TO_SNAKE_CASE =
             "[\\s\\-_]?((?<=.)[A-Z](?=[a-z\\s\\-_])|(?<=[^A-Z])[A-Z]|((?<=[\\s\\-_])[a-z\\d]))";
 
@@ -67,6 +69,15 @@ public class Utils {
     }
 
     public static String fileGenerator(String namespace, String file) {
+        if (namespace.contains(HDFS)) {
+            try {
+                return new Generator().generate(HdfsPath.builder()
+                        .site(namespace.replace(HDFS, ""))
+                        .path(file).build(), "path");
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
         return "//" + namespace + file.replace(namespace + ":/", "");
     }
 
