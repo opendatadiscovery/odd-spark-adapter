@@ -28,7 +28,7 @@ dependencies {
     implementation "org.apache.spark:spark-core_2.12:${sparkVersion}"
     implementation "org.apache.spark:spark-sql_2.12:${sparkVersion}"
     implementation "org.apache.spark:spark-hive_2.12:${sparkVersion}"
-    extraLibs group: 'org.opendatadiscovery', name: 'oddrn-generator-java', version: '0.1.5'
+    extraLibs group: 'org.opendatadiscovery', name: 'oddrn-generator-java', version: '0.1.6'
     extraLibs group: 'org.opendatadiscovery', name: 'ingestion-contract-client', version: '0.1.4'
     extraLibs group: 'com.github.jsqlparser', name: 'jsqlparser', version: '4.2'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
