@@ -8,6 +8,9 @@ import org.apache.spark.scheduler.JobFailed;
 import org.apache.spark.scheduler.SparkListenerJobStart;
 import org.apache.spark.scheduler.SparkListenerEvent;
 import org.apache.spark.scheduler.ActiveJob;
+import org.apache.spark.scheduler.JobResult;
+import org.apache.spark.sql.SQLContext;
+import org.apache.spark.sql.execution.QueryExecution;
 import org.opendatadiscovery.adapters.spark.mapper.DataEntityMapper;
 import org.opendatadiscovery.adapters.spark.mapper.RddMapper;
 import org.opendatadiscovery.adapters.spark.plan.QueryPlanVisitor;
@@ -15,6 +18,7 @@ import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.SparkContext;
+import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext$;
 import org.apache.spark.SparkEnv$;
 
@@ -30,11 +34,14 @@ import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart;
 import org.opendatadiscovery.client.ApiClient;
 import org.opendatadiscovery.client.api.OpenDataDiscoveryIngestionApi;
 import org.opendatadiscovery.client.model.DataEntity;
+import org.opendatadiscovery.client.model.DataEntityList;
 import org.opendatadiscovery.client.model.DataTransformerRun;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Field;
+import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
@@ -73,13 +80,13 @@ public class OddAdapterSparkListener extends SparkListener {
 
     @SuppressWarnings("unused")
     public static void instrument(SparkContext context) {
-        var props = context.conf().toDebugString();
+        String props = context.conf().toDebugString();
         log.info(
                 "Initialized ODD listener with \nspark version: {}\njava.version: {}\nconfiguration: {}",
                 context.version(),
                 System.getProperty("java.version"),
                 props);
-        var properties = new Properties();
+        Properties properties = new Properties();
         properties.putAll(Arrays.stream(props.split("\n"))
                 .map(l -> l.split("="))
                 .collect(Collectors.toMap(e -> e[0], e -> (Object)(e.length > 1 ? e[1] : ""))));
@@ -126,15 +133,15 @@ public class OddAdapterSparkListener extends SparkListener {
     public void onApplicationEnd(SparkListenerApplicationEnd applicationEnd) {
         log.info("onApplicationEnd: {} jobsCount {}", applicationEnd, jobCount);
         rddConfig.clear();
-        var dataEntityList = DataEntityMapper.map(dataEntity, inputs, outputs);
+        DataEntityList dataEntityList = DataEntityMapper.map(dataEntity, inputs, outputs);
         log.info("{}", dataEntityList);
-        var conf = SparkEnv$.MODULE$.get().conf();
-        var host = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY,
+        SparkConf conf = SparkEnv$.MODULE$.get().conf();
+        String host = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY,
                 properties.getProperty(ODD_HOST_CONFIG_KEY));
         if (host != null) {
             log.info("Setting ODD host {}", host);
-            var client = new OpenDataDiscoveryIngestionApi(new ApiClient().setBasePath(host));
-            var res = client.postDataEntityListWithHttpInfo(dataEntityList);
+            OpenDataDiscoveryIngestionApi client = new OpenDataDiscoveryIngestionApi(new ApiClient().setBasePath(host));
+            Mono<ResponseEntity<Void>> res = client.postDataEntityListWithHttpInfo(dataEntityList);
             log.info("POST - {}", res.blockOptional()
                     .map(ResponseEntity::getStatusCode)
                     .map(HttpStatus::getReasonPhrase)
@@ -147,9 +154,9 @@ public class OddAdapterSparkListener extends SparkListener {
     @Override
     public void onJobEnd(SparkListenerJobEnd jobEnd) {
         log.info("onJobEnd {}", jobEnd);
-        var jobResult = jobEnd.jobResult();
+        JobResult jobResult = jobEnd.jobResult();
         if (dataEntity != null) {
-            var dataTransformerRun = dataEntity.getDataTransformerRun();
+            DataTransformerRun dataTransformerRun = dataEntity.getDataTransformerRun();
             if (jobResult instanceof JobFailed) {
                 dataTransformerRun.setStatus(DataTransformerRun.StatusEnum.FAILED);
                 dataTransformerRun
@@ -198,7 +205,7 @@ public class OddAdapterSparkListener extends SparkListener {
     @Override
     public void onOtherEvent(SparkListenerEvent event) {
         if (event instanceof SparkListenerSQLExecutionStart) {
-            var startEvent = (SparkListenerSQLExecutionStart) event;
+            SparkListenerSQLExecutionStart startEvent = (SparkListenerSQLExecutionStart) event;
             log.info("sparkSQLExecStart {}", startEvent);
             sparkSQLExecStart(startEvent.executionId());
         } else if (event instanceof SparkListenerSQLExecutionEnd) {
@@ -207,13 +214,13 @@ public class OddAdapterSparkListener extends SparkListener {
     }
 
     private void sparkRDDExecStart(ActiveJob job) {
-        var finalRDD = job.finalStage().rdd();
+        RDD<?> finalRDD = job.finalStage().rdd();
         log.info("RDD S3_ENDPOINT: {}",s3endpoint(S3A_ENDPOINT).orElse(s3endpoint(S3N_ENDPOINT).orElse("")));
-        var rddMapper = new RddMapper();
-        var jobSuffix = rddMapper.name(finalRDD);
-        var rddInputs = rddMapper.inputs(finalRDD);
+        RddMapper rddMapper = new RddMapper();
+        String jobSuffix = rddMapper.name(finalRDD);
+        List<URI> rddInputs = rddMapper.inputs(finalRDD);
         this.inputs.addAll(DataEntityMapper.map(rddInputs));
-        var rddOutputs = rddMapper.outputs(job,
+        List<URI> rddOutputs = rddMapper.outputs(job,
                 OddAdapterSparkListener.getConfigForRDD(finalRDD));
         this.outputs.addAll(DataEntityMapper.map(rddOutputs));
         log.info("RDD jobId={} jobSuffix={} rddInputs={} rddOutputs={}",
@@ -224,15 +231,15 @@ public class OddAdapterSparkListener extends SparkListener {
      * called by the SparkListener when a spark-sql (Dataset api) execution starts
      */
     private void sparkSQLExecStart(long executionId) {
-        var queryExecution = SQLExecution.getQueryExecution(executionId);
+        QueryExecution queryExecution = SQLExecution.getQueryExecution(executionId);
         if (queryExecution != null) {
             //log.info("sparkPlan {}", queryExecution.sparkPlan().prettyJson());
-            var visitorFactory = VisitorFactoryProvider.getInstance(SparkContext.getOrCreate());
-            var logicalPlan = queryExecution.logical();
-            var sqlContext = queryExecution.sparkPlan().sqlContext();
-            var inputs = apply(visitorFactory.getInputVisitors(sqlContext), logicalPlan);
+            VisitorFactory visitorFactory = VisitorFactoryProvider.getInstance(SparkContext.getOrCreate());
+            LogicalPlan logicalPlan = queryExecution.logical();
+            SQLContext sqlContext = queryExecution.sparkPlan().sqlContext();
+            List<DataEntity> inputs = apply(visitorFactory.getInputVisitors(sqlContext), logicalPlan);
             if (inputs.isEmpty()) {
-                var outputs = apply(visitorFactory.getOutputVisitors(sqlContext), logicalPlan);
+                List<DataEntity> outputs = apply(visitorFactory.getOutputVisitors(sqlContext), logicalPlan);
                 this.outputs.addAll(outputs);
             } else {
                 this.inputs.addAll(inputs);

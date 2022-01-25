@@ -11,6 +11,7 @@ import org.opendatadiscovery.oddrn.model.CustomS3Path;
 import org.opendatadiscovery.oddrn.model.MysqlPath;
 import org.opendatadiscovery.oddrn.model.PostgreSqlPath;
 import org.opendatadiscovery.oddrn.model.HdfsPath;
+import org.opendatadiscovery.oddrn.model.OddrnPath;
 
 import java.io.IOException;
 import java.net.URI;
@@ -48,7 +49,7 @@ public class Utils {
 
     public static String sqlGenerator(String url, String tableName) {
         try {
-            var oddrnPath = new JdbcUrlParser().parse(url);
+            OddrnPath oddrnPath = new JdbcUrlParser().parse(url);
             switch (oddrnPath.prefix()) {
                 case "//mysql" :
                     return new Generator().generate(((MysqlPath)oddrnPath)
@@ -82,8 +83,8 @@ public class Utils {
     }
 
     public static String s3Generator(String namespace, String path) {
-        var bucket = "";
-        var endpoint = "";
+        String bucket = "";
+        String endpoint = "";
         if (namespace.contains(S3A)) {
             bucket = namespace.replace(S3A, "");
             endpoint = s3endpoint(S3A_ENDPOINT).orElse("");
@@ -91,7 +92,7 @@ public class Utils {
             bucket = namespace.replace(S3N, "");
             endpoint = s3endpoint(S3N_ENDPOINT).orElse("");
         }
-        var key = path.replace(namespace, "");
+        String key = path.replace(namespace, "");
         key = key.startsWith("/") ? key.substring(1) : key;
         try {
             if (endpoint.isEmpty() || endpoint.contains(AMAZONAWS_COM)) {

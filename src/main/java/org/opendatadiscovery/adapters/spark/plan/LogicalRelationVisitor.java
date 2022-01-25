@@ -2,6 +2,7 @@ package org.opendatadiscovery.adapters.spark.plan;
 
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.util.TablesNamesFinder;
 import org.opendatadiscovery.adapters.spark.mapper.DataEntityMapper;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
@@ -71,8 +72,8 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
                 .distinct()
                 .map(
                         path -> {
-                            var namespace = Utils.namespaceUri(path.toUri());
-                            var file = Arrays.stream(relation.location().inputFiles())
+                            String namespace = Utils.namespaceUri(path.toUri());
+                            String file = Arrays.stream(relation.location().inputFiles())
                                     .filter(f -> f.contains(namespace))
                                     .collect(Collectors.joining());
                             return DataEntityMapper.map(namespace, file);
@@ -82,9 +83,9 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
 
     private List<DataEntity> handleJdbcRelation(JDBCRelation relation) {
 
-        var url = relation.jdbcOptions().url();
-        var tableOrQuery = relation.jdbcOptions().tableOrQuery();
-        var tables = extractTableNames(tableOrQuery);
+        String url = relation.jdbcOptions().url();
+        String tableOrQuery = relation.jdbcOptions().tableOrQuery();
+        List<String> tables = extractTableNames(tableOrQuery);
         if (tables.isEmpty()) {
             return Collections.singletonList(DataEntityMapper.map(null, url, tableOrQuery));
         }
@@ -93,8 +94,8 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
 
     private List<String> extractTableNames(String tableOrQuery) {
         try {
-            var sql = tableOrQuery.substring(tableOrQuery.indexOf("(") + 1, tableOrQuery.indexOf(")"));
-            var statement = CCJSqlParserUtil.parse(sql);
+            String sql = tableOrQuery.substring(tableOrQuery.indexOf("(") + 1, tableOrQuery.indexOf(")"));
+            Statement statement = CCJSqlParserUtil.parse(sql);
             return new TablesNamesFinder().getTableList(statement);
         } catch (StringIndexOutOfBoundsException ignored) {
             log.info("JdbcRelation table found: {}", tableOrQuery);

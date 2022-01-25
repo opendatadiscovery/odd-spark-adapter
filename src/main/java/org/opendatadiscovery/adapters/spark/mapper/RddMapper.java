@@ -19,6 +19,7 @@ import org.apache.spark.scheduler.ResultStage;
 import org.apache.spark.util.SerializableJobConf;
 import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
 import scala.Function2;
+import scala.collection.Iterator;
 import scala.collection.JavaConversions;
 import scala.collection.Seq;
 
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.List;
@@ -41,7 +43,7 @@ import static org.opendatadiscovery.adapters.spark.utils.Utils.CAMEL_TO_SNAKE_CA
 public class RddMapper {
 
     public String name(RDD<?> rdd) {
-        var rddName = (String) rdd.name();
+        String rddName = rdd.name();
         if (rddName == null
                 // HadoopRDDs are always named for the path. Don't name the RDD for a file. Otherwise, the
                 // job name will end up differing each time we read a path with a date or other variable
@@ -62,15 +64,15 @@ public class RddMapper {
                             .replaceAll(CAMEL_TO_SNAKE_CASE, "_$1") // camel case to snake case
                             .toLowerCase(Locale.ROOT);
         }
-        var deps = (Seq<Dependency<?>>) rdd.dependencies();
-        var dependencies = ScalaConversionUtils.fromSeq(deps);
+        Seq<Dependency<?>> deps = rdd.dependencies();
+        List<Dependency<?>> dependencies = ScalaConversionUtils.fromSeq(deps);
         if (dependencies.isEmpty()) {
             return rddName;
         }
-        var dependencyNames = dependencies.stream()
+        List<String> dependencyNames = dependencies.stream()
                 .map(d -> name(d.rdd()))
                 .collect(Collectors.toList());
-        var dependencyName = Strings.join(dependencyNames, "_");
+        String dependencyName = Strings.join(dependencyNames, "_");
         if (!dependencyName.startsWith(rddName)) {
             return rddName + "_" + dependencyName;
         } else {
@@ -79,7 +81,7 @@ public class RddMapper {
     }
 
     public List<URI> inputs(RDD<?> finalRdd) {
-        var rdds = flatten(finalRdd);
+        Set<RDD<?>> rdds = flatten(finalRdd);
         return rdds.stream()
                 .map(this::getInputPaths)
                 .filter(Objects::nonNull)
@@ -91,12 +93,12 @@ public class RddMapper {
     public List<URI> outputs(ActiveJob job, Configuration config) {
         Configuration jc = new JobConf();
         if (job.finalStage() instanceof ResultStage) {
-            var fn = ((ResultStage) job.finalStage()).func();
+            Function2<TaskContext, Iterator<?>, ?> fn = ((ResultStage) job.finalStage()).func();
             try {
-                var f = getConfigField(fn);
+                Field f = getConfigField(fn);
                 f.setAccessible(true);
 
-                var configUtil =
+                HadoopMapRedWriteConfigUtil configUtil =
                         Optional.of(f.get(fn))
                                 .filter(HadoopMapRedWriteConfigUtil.class::isInstance)
                                 .map(HadoopMapRedWriteConfigUtil.class::cast)
@@ -105,9 +107,9 @@ public class RddMapper {
                                                 new NoSuchFieldException(
                                                         "Field is not instance of HadoopMapRedWriteConfigUtil"));
 
-                var confField = HadoopMapRedWriteConfigUtil.class.getDeclaredField("conf");
+                Field confField = HadoopMapRedWriteConfigUtil.class.getDeclaredField("conf");
                 confField.setAccessible(true);
-                var conf = (SerializableJobConf) confField.get(configUtil);
+                SerializableJobConf conf = (SerializableJobConf) confField.get(configUtil);
                 jc = conf.value();
             } catch (IllegalAccessException | NoSuchFieldException nfe) {
                 log.warn("Unable to access job conf from RDD", nfe);
@@ -116,7 +118,7 @@ public class RddMapper {
         } else {
             jc = config;
         }
-        var outputPath = getOutputPath(jc);
+        Path outputPath = getOutputPath(jc);
         log.info("Found output path {} from RDD {}", outputPath, job.finalStage().rdd());
         if (outputPath != null) {
             return Collections.singletonList(outputPath.toUri());
@@ -134,7 +136,7 @@ public class RddMapper {
         } else {
             jc = new JobConf(config);
         }
-        var path = org.apache.hadoop.mapred.FileOutputFormat.getOutputPath(jc);
+        Path path = org.apache.hadoop.mapred.FileOutputFormat.getOutputPath(jc);
         if (path == null) {
             try {
                 // old fashioned mapreduce api
@@ -158,7 +160,7 @@ public class RddMapper {
     private Set<RDD<?>> flatten(RDD<?> rdd) {
         Set<RDD<?>> rdds = new HashSet<>();
         rdds.add(rdd);
-        var deps = JavaConversions.asJavaCollection(rdd.dependencies());
+        Collection<Dependency<?>> deps = JavaConversions.asJavaCollection(rdd.dependencies());
         for (Dependency<?> dep : deps) {
             rdds.addAll(flatten(dep.rdd()));
         }
@@ -167,12 +169,12 @@ public class RddMapper {
 
     private List<Path> getInputPaths(RDD<?> rdd) {
         if (rdd instanceof HadoopRDD) {
-            return List.of(
+            return Arrays.asList(
                     org.apache.hadoop.mapred.FileInputFormat.getInputPaths(
                             ((HadoopRDD<?, ?>) rdd).getJobConf()));
         } else if (rdd instanceof NewHadoopRDD) {
             try {
-                return List.of(
+                return Arrays.asList(
                         org.apache.hadoop.mapreduce.lib.input.FileInputFormat.getInputPaths(
                                 new Job(((NewHadoopRDD<?, ?>) rdd).getConf())));
             } catch (IOException e) {

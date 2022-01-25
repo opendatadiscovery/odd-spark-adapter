@@ -17,8 +17,8 @@ public class SaveIntoDataSourceCommandVisitor
   @Override
   public List<DataEntity> apply(LogicalPlan logicalPlan) {
     SaveIntoDataSourceCommand command = (SaveIntoDataSourceCommand) logicalPlan;
-    var url = command.options().get(URL).get();
-    var tableName = command.options().get(DBTABLE).get();
+    String url = command.options().get(URL).get();
+    String tableName = command.options().get(DBTABLE).get();
     return Collections.singletonList(new DataEntity()
             .type(DataEntityType.TABLE)
             .oddrn(Utils.sqlGenerator(url, tableName))

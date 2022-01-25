@@ -65,7 +65,7 @@ public class DataEntityMapper {
     }
 
     public static DataEntity map(DataEntity dataEntity) {
-        var transformerRun = dataEntity.getDataTransformerRun();
+        DataTransformerRun transformerRun = dataEntity.getDataTransformerRun();
         return new DataEntity()
                 .metadata(dataEntity.getMetadata())
                 .createdAt(dataEntity.getCreatedAt())
@@ -82,16 +82,16 @@ public class DataEntityMapper {
     }
 
     public static DataEntity map(Properties properties) {
-        var job = properties.getProperty(SPARK_APP_NAME);
-        var host = Optional.ofNullable(properties.getProperty(SPARK_MASTER))
+        String job = properties.getProperty(SPARK_APP_NAME);
+        String host = Optional.ofNullable(properties.getProperty(SPARK_MASTER))
                 .map(s -> s.split("://"))
                 .map(s -> s.length > 1 ? s[1] : s[0])
                 .map(s -> s.split(":")[0])
                 .orElse(null);
-        var run = properties.getProperty(SPARK_APP_ID);
+        String run = properties.getProperty(SPARK_APP_ID);
         try {
             Map props = properties;
-            var startTime = OffsetDateTime
+            OffsetDateTime startTime = OffsetDateTime
                     .ofInstant(Instant.ofEpochMilli(Long.parseLong(properties.getProperty(SPARK_APP_START_TIME))), UTC);
             return new DataEntity()
                     .name(run)
