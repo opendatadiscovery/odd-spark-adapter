@@ -2,8 +2,11 @@ package org.opendatadiscovery.adapters.spark.plan;
 
 import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
 import org.junit.jupiter.api.Test;
+import org.opendatadiscovery.client.model.DataEntity;
 import scala.Option;
 import scala.collection.immutable.Map;
+
+import java.util.List;
 
 import static org.opendatadiscovery.adapters.spark.plan.SaveIntoDataSourceCommandVisitor.URL;
 import static org.opendatadiscovery.adapters.spark.plan.SaveIntoDataSourceCommandVisitor.DBTABLE;
@@ -18,7 +21,7 @@ public class SaveIntoDataSourceCommandVisitorTest {
 
     @Test
     public void testSaveIntoDataSourceCommandOutput() {
-        var command = mock(SaveIntoDataSourceCommand.class);
+        SaveIntoDataSourceCommand command = mock(SaveIntoDataSourceCommand.class);
         assertNotNull(command);
         when(command.options()).thenReturn(mock(Map.class));
         assertNotNull(command.options());
@@ -26,14 +29,14 @@ public class SaveIntoDataSourceCommandVisitorTest {
         when(command.options().get(DBTABLE)).thenReturn(Option.apply("mta_transform"));
         assertEquals("jdbc:postgresql://target-db:5432/mta_data", command.options().get(URL).get());
         assertEquals("mta_transform", command.options().get(DBTABLE).get());
-        var data = new SaveIntoDataSourceCommandVisitor().apply(command);
+        List<DataEntity> data = new SaveIntoDataSourceCommandVisitor().apply(command);
         assertTrue(data.stream().anyMatch(d -> d.getOddrn()
                 .equals("//postgresql/host/target-db/databases/mta_data/schemas/public/tables/mta_transform")));
     }
 
     @Test
     public void testSaveIntoDataSourceCommandDefined() {
-        var command = mock(SaveIntoDataSourceCommand.class);
+        SaveIntoDataSourceCommand command = mock(SaveIntoDataSourceCommand.class);
         assertNotNull(command);
         assertTrue(new SaveIntoDataSourceCommandVisitor().isDefinedAt(command));
     }

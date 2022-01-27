@@ -17,8 +17,8 @@ public class DataEntityMapperTest {
 
     @Test
     public void jobDateEntityMapperTest() {
-        var jobRunDataEntity = mockSparkListenerJobStart();
-        var jobDataEntity = DataEntityMapper.map(jobRunDataEntity);
+        DataEntity jobRunDataEntity = mockSparkListenerJobStart();
+        DataEntity jobDataEntity = DataEntityMapper.map(jobRunDataEntity);
         assertEquals(DataEntityType.JOB, jobDataEntity.getType());
         assertEquals("//spark/host/spark-master/jobs/etl-app",
                 jobDataEntity.getOddrn());
@@ -26,7 +26,7 @@ public class DataEntityMapperTest {
 
     @Test
     public void jobRunDateEntityMapperTest() {
-        var dataEntity = mockSparkListenerJobStart();
+        DataEntity dataEntity = mockSparkListenerJobStart();
         assertEquals("//spark/host/spark-master/jobs/etl-app/runs/app-20211204075250-0013",
                 dataEntity.getOddrn());
         assertEquals(DataEntityType.JOB_RUN, dataEntity.getType());
@@ -36,7 +36,7 @@ public class DataEntityMapperTest {
     }
 
     private DataEntity mockSparkListenerJobStart() {
-        var jobStart = mock(SparkListenerJobStart.class);
+        SparkListenerJobStart jobStart = mock(SparkListenerJobStart.class);
         when(jobStart.time()).thenReturn(Instant.now().toEpochMilli());
         when(jobStart.properties()).thenReturn(mock(Properties.class));
         when(jobStart.properties().getProperty(DataEntityMapper.SPARK_MASTER)).thenReturn("spark://spark-master:7077");
