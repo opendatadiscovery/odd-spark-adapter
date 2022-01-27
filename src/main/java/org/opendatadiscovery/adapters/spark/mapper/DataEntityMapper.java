@@ -1,5 +1,6 @@
 package org.opendatadiscovery.adapters.spark.mapper;
 
+import org.apache.spark.SparkContext;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
 import org.opendatadiscovery.client.model.DataEntity;
 import org.opendatadiscovery.client.model.DataEntityList;
@@ -14,6 +15,7 @@ import org.opendatadiscovery.oddrn.model.SparkPath;
 import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +81,14 @@ public class DataEntityMapper {
                 .type(DataEntityType.TABLE)
                 .dataTransformer(new DataTransformer().sql(sql))
                 .oddrn(Utils.sqlGenerator(url, tableName));
+    }
+
+    public static DataEntity map(SparkContext context) {
+        Properties properties = new Properties();
+        properties.putAll(Arrays.stream(context.conf().toDebugString().split("\n"))
+                .map(l -> l.split("="))
+                .collect(Collectors.toMap(e -> e[0], e -> (Object)(e.length > 1 ? e[1] : ""))));
+        return DataEntityMapper.map(properties);
     }
 
     public static DataEntity map(Properties properties) {

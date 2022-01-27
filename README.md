@@ -82,3 +82,12 @@ To start ETL job using SparkAgent
 --jars /opt/spark-apps/aws-java-sdk-bundle-1.11.874.jar,/opt/spark-apps/hadoop-aws-3.2.0.jar \
 /opt/spark-apps/s3-aws-word-count.py
 ```
+
+To start with AWS Glue job
+```sh
+aws glue start-job-run \
+--job-name odd-spark-adapter-test \
+--profile odd \
+--region eu-central-1 \
+--arguments='--extra-jars="s3://spark-adapter-test/jars/odd-spark-adapter-0.0.1-SNAPSHOT.jar",--conf="spark.extraListeners=org.opendatadiscovery.adapters.spark.OddAdapterSparkListener"'
+```

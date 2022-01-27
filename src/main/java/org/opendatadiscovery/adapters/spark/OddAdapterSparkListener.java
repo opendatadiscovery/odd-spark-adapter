@@ -38,13 +38,13 @@ import org.opendatadiscovery.client.model.DataEntityList;
 import org.opendatadiscovery.client.model.DataTransformerRun;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -52,7 +52,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.WeakHashMap;
-import java.util.stream.Collectors;
 
 import static org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils.findSparkConfigKey;
 import static java.time.ZoneOffset.UTC;
@@ -80,18 +79,13 @@ public class OddAdapterSparkListener extends SparkListener {
 
     @SuppressWarnings("unused")
     public static void instrument(SparkContext context) {
-        String props = context.conf().toDebugString();
         log.info(
                 "Initialized ODD listener with \nspark version: {}\njava.version: {}\nconfiguration: {}",
                 context.version(),
                 System.getProperty("java.version"),
-                props);
-        Properties properties = new Properties();
-        properties.putAll(Arrays.stream(props.split("\n"))
-                .map(l -> l.split("="))
-                .collect(Collectors.toMap(e -> e[0], e -> (Object)(e.length > 1 ? e[1] : ""))));
+                context.conf().toDebugString());
         OddAdapterSparkListener listener = new OddAdapterSparkListener();
-        listener.dataEntity = DataEntityMapper.map(properties);
+        listener.dataEntity = DataEntityMapper.map(context);
         context.addSparkListener(listener);
     }
 
@@ -175,9 +169,14 @@ public class OddAdapterSparkListener extends SparkListener {
     @Override
     public void onJobStart(SparkListenerJobStart jobStart) {
         jobCount += 1;
-        log.info("onJobStart#{} {}", jobCount, jobStart.properties());
+        Properties properties = jobStart.properties();
+        log.info("onJobStart#{} {}", jobCount, properties);
         if (dataEntity == null) {
-            dataEntity = DataEntityMapper.map(jobStart.properties());
+            if (StringUtils.hasText(properties.getProperty("spark.rdd.scope"))) {
+                dataEntity = DataEntityMapper.map(SparkContext.getOrCreate());
+            } else {
+                dataEntity = DataEntityMapper.map(properties);
+            }
         } else {
             Map props = jobStart.properties();
             dataEntity.getMetadata().get(0).getMetadata().putAll((Map<String, Object>) props);
