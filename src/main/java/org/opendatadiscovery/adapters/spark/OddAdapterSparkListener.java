@@ -31,6 +31,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.SQLExecution;
 import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionEnd;
 import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart;
+import org.opendatadiscovery.adapters.spark.utils.Utils;
 import org.opendatadiscovery.client.ApiClient;
 import org.opendatadiscovery.client.api.OpenDataDiscoveryIngestionApi;
 import org.opendatadiscovery.client.model.DataEntity;
@@ -53,7 +54,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.WeakHashMap;
 
-import static org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils.findSparkConfigKey;
 import static java.time.ZoneOffset.UTC;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.S3A_ENDPOINT;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.S3N_ENDPOINT;
@@ -130,8 +130,9 @@ public class OddAdapterSparkListener extends SparkListener {
         DataEntityList dataEntityList = DataEntityMapper.map(dataEntity, inputs, outputs);
         log.info("{}", dataEntityList);
         SparkConf conf = SparkEnv$.MODULE$.get().conf();
-        String host = findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY,
-                properties.getProperty(ODD_HOST_CONFIG_KEY));
+        String host = ScalaConversionUtils.findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY)
+                .map(x -> properties.getProperty(ODD_HOST_CONFIG_KEY))
+                .orElse(Utils.getProperty(System.getProperties(), ODD_HOST_CONFIG_KEY));
         if (host != null) {
             log.info("Setting ODD host {}", host);
             OpenDataDiscoveryIngestionApi client = new OpenDataDiscoveryIngestionApi(new ApiClient().setBasePath(host));

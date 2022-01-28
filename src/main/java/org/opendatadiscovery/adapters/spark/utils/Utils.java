@@ -16,6 +16,7 @@ import org.opendatadiscovery.oddrn.model.OddrnPath;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
+import java.util.Properties;
 
 @Slf4j
 public class Utils {
@@ -112,5 +113,13 @@ public class Utils {
     public static Optional<String> s3endpoint(String key) {
         return Optional
                 .ofNullable(SparkContext.getOrCreate().hadoopConfiguration()).map(h -> h.get(key));
+    }
+
+    public static String getProperty(Properties properties, String key) {
+        String[] tokens = properties.toString().split("--" + key + " ");
+        if (tokens.length > 1) {
+            return tokens[1].split(" --")[0];
+        }
+        return null;
     }
 }
