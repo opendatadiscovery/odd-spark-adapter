@@ -23,6 +23,7 @@ public class Utils {
     public static final String S3A_ENDPOINT = "fs.s3a.endpoint";
     public static final String S3N_ENDPOINT = "fs.s3n.endpoint";
     public static final String AMAZONAWS_COM = ".amazonaws.com";
+    public static final String S3 = "s3://";
     public static final String S3A = "s3a://";
     public static final String S3N = "s3n://";
     public static final String HDFS = "hdfs://";
@@ -89,22 +90,30 @@ public class Utils {
         if (namespace.contains(S3A)) {
             bucket = namespace.replace(S3A, "");
             endpoint = s3endpoint(S3A_ENDPOINT).orElse("");
-        } else {
+        } else if (namespace.contains(S3N)) {
             bucket = namespace.replace(S3N, "");
             endpoint = s3endpoint(S3N_ENDPOINT).orElse("");
+        } else {
+            bucket = namespace.replace(S3, "");
         }
         String key = path.replace(namespace, "");
         key = key.startsWith("/") ? key.substring(1) : key;
         try {
             if (endpoint.isEmpty() || endpoint.contains(AMAZONAWS_COM)) {
-                return new Generator().generate(AwsS3Path.builder()
-                        .bucket(bucket)
-                        .key(key).build(), "key");
+                AwsS3Path.AwsS3PathBuilder builder = AwsS3Path.builder()
+                        .bucket(bucket);
+                if (key.isEmpty()) {
+                    return new Generator().generate(builder.build(), "bucket");
+                }
+                return new Generator().generate(builder.key(key).build(), "key");
             }
-            return new Generator().generate(CustomS3Path.builder()
+            CustomS3Path.CustomS3PathBuilder builder = CustomS3Path.builder()
                     .endpoint(endpoint)
-                    .bucket(bucket)
-                    .key(key).build(), "key");
+                    .bucket(bucket);
+            if (key.isEmpty()) {
+                return new Generator().generate(builder.build(), "bucket");
+            }
+            return new Generator().generate(builder.key(key).build(), "key");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
