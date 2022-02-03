@@ -11,16 +11,19 @@ import org.opendatadiscovery.oddrn.model.CustomS3Path;
 import org.opendatadiscovery.oddrn.model.MysqlPath;
 import org.opendatadiscovery.oddrn.model.PostgreSqlPath;
 import org.opendatadiscovery.oddrn.model.HdfsPath;
+import org.opendatadiscovery.oddrn.model.OddrnPath;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
+import java.util.Properties;
 
 @Slf4j
 public class Utils {
     public static final String S3A_ENDPOINT = "fs.s3a.endpoint";
     public static final String S3N_ENDPOINT = "fs.s3n.endpoint";
     public static final String AMAZONAWS_COM = ".amazonaws.com";
+    public static final String S3 = "s3://";
     public static final String S3A = "s3a://";
     public static final String S3N = "s3n://";
     public static final String HDFS = "hdfs://";
@@ -48,7 +51,7 @@ public class Utils {
 
     public static String sqlGenerator(String url, String tableName) {
         try {
-            var oddrnPath = new JdbcUrlParser().parse(url);
+            OddrnPath oddrnPath = new JdbcUrlParser().parse(url);
             switch (oddrnPath.prefix()) {
                 case "//mysql" :
                     return new Generator().generate(((MysqlPath)oddrnPath)
@@ -82,27 +85,35 @@ public class Utils {
     }
 
     public static String s3Generator(String namespace, String path) {
-        var bucket = "";
-        var endpoint = "";
+        String bucket = "";
+        String endpoint = "";
         if (namespace.contains(S3A)) {
             bucket = namespace.replace(S3A, "");
             endpoint = s3endpoint(S3A_ENDPOINT).orElse("");
-        } else {
+        } else if (namespace.contains(S3N)) {
             bucket = namespace.replace(S3N, "");
             endpoint = s3endpoint(S3N_ENDPOINT).orElse("");
+        } else {
+            bucket = namespace.replace(S3, "");
         }
-        var key = path.replace(namespace, "");
+        String key = path.replace(namespace, "");
         key = key.startsWith("/") ? key.substring(1) : key;
         try {
             if (endpoint.isEmpty() || endpoint.contains(AMAZONAWS_COM)) {
-                return new Generator().generate(AwsS3Path.builder()
-                        .bucket(bucket)
-                        .key(key).build(), "key");
+                AwsS3Path.AwsS3PathBuilder builder = AwsS3Path.builder()
+                        .bucket(bucket);
+                if (key.isEmpty()) {
+                    return new Generator().generate(builder.build(), "bucket");
+                }
+                return new Generator().generate(builder.key(key).build(), "key");
             }
-            return new Generator().generate(CustomS3Path.builder()
+            CustomS3Path.CustomS3PathBuilder builder = CustomS3Path.builder()
                     .endpoint(endpoint)
-                    .bucket(bucket)
-                    .key(key).build(), "key");
+                    .bucket(bucket);
+            if (key.isEmpty()) {
+                return new Generator().generate(builder.build(), "bucket");
+            }
+            return new Generator().generate(builder.key(key).build(), "key");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -111,5 +122,13 @@ public class Utils {
     public static Optional<String> s3endpoint(String key) {
         return Optional
                 .ofNullable(SparkContext.getOrCreate().hadoopConfiguration()).map(h -> h.get(key));
+    }
+
+    public static String getProperty(Properties properties, String key) {
+        String[] tokens = properties.toString().split("--" + key + " ");
+        if (tokens.length > 1) {
+            return tokens[1].split(" --")[0];
+        }
+        return null;
     }
 }

@@ -11,15 +11,18 @@ import java.util.List;
 import java.util.Optional;
 
 public class InsertIntoHadoopFsRelationVisitor
-    extends QueryPlanVisitor<InsertIntoHadoopFsRelationCommand, DataEntity> {
+        extends QueryPlanVisitor<InsertIntoHadoopFsRelationCommand, DataEntity> {
 
   @Override
   public List<DataEntity> apply(LogicalPlan logicalPlan) {
     InsertIntoHadoopFsRelationCommand command = (InsertIntoHadoopFsRelationCommand) logicalPlan;
-    var outputPath = Optional.ofNullable(command)
-            .map(InsertIntoHadoopFsRelationCommand::outputPath)
-            .map(Path::toUri)
-            .orElseThrow();
-    return Collections.singletonList(DataEntityMapper.map(outputPath));
+    return Collections.singletonList(
+            DataEntityMapper.map(
+                    Optional.ofNullable(command)
+                            .map(InsertIntoHadoopFsRelationCommand::outputPath)
+                            .map(Path::toUri)
+                            .orElseThrow()
+            )
+    );
   }
 }
