@@ -1,5 +1,6 @@
 from pyspark.sql import SparkSession
 import os
+import uuid
 
 spark = SparkSession \
     .builder \
@@ -13,14 +14,14 @@ spark._jsc.hadoopConfiguration().set("fs.s3a.secret.key", "minioadmin")
 
 spark._jsc.hadoopConfiguration().set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
 
-spark._jsc.hadoopConfiguration().set("fs.s3a.endpoint", "http://192.168.192.3:9000")
+spark._jsc.hadoopConfiguration().set("fs.s3a.endpoint", "http://192.168.80.2:9000")
 spark._jsc.hadoopConfiguration().set("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
 spark._jsc.hadoopConfiguration().set("spark.hadoop.fs.s3a.path.style.access", "true")
 
-df = spark.read.text("s3a://test/data.txt")
-df.show()
+#df = spark.read.text("s3a://test/data.txt")
+#df.show()
 
-#rdd = spark.sparkContext.textFile("s3a://test/data.txt")
-#result = rdd.flatMap(lambda x: x.split(" ")).map(lambda x: (x,1)).reduceByKey(lambda x,y: x+y)
-#result.saveAsTextFile("/opt/spark-data/wc/result")
+rdd = spark.sparkContext.textFile("s3a://test/data.txt")
+result = rdd.flatMap(lambda x: x.split(" ")).map(lambda x: (x,1)).reduceByKey(lambda x,y: x+y)
+result.saveAsTextFile(f"/opt/spark-data/wc/result/{uuid.uuid4()}")
 
