@@ -1,5 +1,18 @@
 package org.opendatadiscovery.adapters.spark.mapper;
 
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -23,26 +36,12 @@ import scala.collection.Iterator;
 import scala.collection.JavaConversions;
 import scala.collection.Seq;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.URI;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Locale;
-import java.util.List;
-import java.util.Optional;
-import java.util.Objects;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.stream.Collectors;
-
 import static org.opendatadiscovery.adapters.spark.utils.Utils.CAMEL_TO_SNAKE_CASE;
 
 @Slf4j
 public class RddMapper {
 
-    public String name(RDD<?> rdd) {
+    public String name(final RDD<?> rdd) {
         String rddName = rdd.name();
         if (rddName == null
                 // HadoopRDDs are always named for the path. Don't name the RDD for a file. Otherwise, the
@@ -64,24 +63,23 @@ public class RddMapper {
                             .replaceAll(CAMEL_TO_SNAKE_CASE, "_$1") // camel case to snake case
                             .toLowerCase(Locale.ROOT);
         }
-        Seq<Dependency<?>> deps = rdd.dependencies();
-        List<Dependency<?>> dependencies = ScalaConversionUtils.fromSeq(deps);
+        final Seq<Dependency<?>> deps = rdd.dependencies();
+        final List<Dependency<?>> dependencies = ScalaConversionUtils.fromSeq(deps);
         if (dependencies.isEmpty()) {
             return rddName;
         }
-        List<String> dependencyNames = dependencies.stream()
+        final List<String> dependencyNames = dependencies.stream()
                 .map(d -> name(d.rdd()))
                 .collect(Collectors.toList());
-        String dependencyName = Strings.join(dependencyNames, "_");
+        final String dependencyName = Strings.join(dependencyNames, "_");
         if (!dependencyName.startsWith(rddName)) {
             return rddName + "_" + dependencyName;
-        } else {
-            return dependencyName;
         }
+        return dependencyName;
     }
 
-    public List<URI> inputs(RDD<?> finalRdd) {
-        Set<RDD<?>> rdds = flatten(finalRdd);
+    public List<URI> inputs(final RDD<?> finalRdd) {
+        final Set<RDD<?>> rdds = flatten(finalRdd);
         return rdds.stream()
                 .map(this::getInputPaths)
                 .filter(Objects::nonNull)
@@ -90,15 +88,15 @@ public class RddMapper {
                 .collect(Collectors.toList());
     }
 
-    public List<URI> outputs(ActiveJob job, Configuration config) {
+    public List<URI> outputs(final ActiveJob job, final Configuration config) {
         Configuration jc = new JobConf();
         if (job.finalStage() instanceof ResultStage) {
-            Function2<TaskContext, Iterator<?>, ?> fn = ((ResultStage) job.finalStage()).func();
+            final Function2<TaskContext, Iterator<?>, ?> fn = ((ResultStage) job.finalStage()).func();
             try {
-                Field f = getConfigField(fn);
+                final Field f = getConfigField(fn);
                 f.setAccessible(true);
 
-                HadoopMapRedWriteConfigUtil configUtil =
+                final HadoopMapRedWriteConfigUtil configUtil =
                         Optional.of(f.get(fn))
                                 .filter(HadoopMapRedWriteConfigUtil.class::isInstance)
                                 .map(HadoopMapRedWriteConfigUtil.class::cast)
@@ -107,9 +105,9 @@ public class RddMapper {
                                                 new NoSuchFieldException(
                                                         "Field is not instance of HadoopMapRedWriteConfigUtil"));
 
-                Field confField = HadoopMapRedWriteConfigUtil.class.getDeclaredField("conf");
+                final Field confField = HadoopMapRedWriteConfigUtil.class.getDeclaredField("conf");
                 confField.setAccessible(true);
-                SerializableJobConf conf = (SerializableJobConf) confField.get(configUtil);
+                final SerializableJobConf conf = (SerializableJobConf) confField.get(configUtil);
                 jc = conf.value();
             } catch (IllegalAccessException | NoSuchFieldException nfe) {
                 log.warn("Unable to access job conf from RDD", nfe);
@@ -118,7 +116,7 @@ public class RddMapper {
         } else {
             jc = config;
         }
-        Path outputPath = getOutputPath(jc);
+        final Path outputPath = getOutputPath(jc);
         log.info("Found output path {} from RDD {}", outputPath, job.finalStage().rdd());
         if (outputPath != null) {
             return Collections.singletonList(outputPath.toUri());
@@ -126,11 +124,11 @@ public class RddMapper {
         return Collections.emptyList();
     }
 
-    private Path getOutputPath(Configuration config) {
+    private Path getOutputPath(final Configuration config) {
         if (config == null) {
             return null;
         }
-        JobConf jc;
+        final JobConf jc;
         if (config instanceof JobConf) {
             jc = (JobConf) config;
         } else {
@@ -148,7 +146,7 @@ public class RddMapper {
         return path;
     }
 
-    private Field getConfigField(Function2<TaskContext, scala.collection.Iterator<?>, ?> fn)
+    private Field getConfigField(final Function2<TaskContext, scala.collection.Iterator<?>, ?> fn)
             throws NoSuchFieldException {
         try {
             return fn.getClass().getDeclaredField("config$1");
@@ -157,17 +155,17 @@ public class RddMapper {
         }
     }
 
-    private Set<RDD<?>> flatten(RDD<?> rdd) {
-        Set<RDD<?>> rdds = new HashSet<>();
+    private Set<RDD<?>> flatten(final RDD<?> rdd) {
+        final Set<RDD<?>> rdds = new HashSet<>();
         rdds.add(rdd);
-        Collection<Dependency<?>> deps = JavaConversions.asJavaCollection(rdd.dependencies());
-        for (Dependency<?> dep : deps) {
+        final Collection<Dependency<?>> deps = JavaConversions.asJavaCollection(rdd.dependencies());
+        for (final Dependency<?> dep : deps) {
             rdds.addAll(flatten(dep.rdd()));
         }
         return rdds;
     }
 
-    private List<Path> getInputPaths(RDD<?> rdd) {
+    private List<Path> getInputPaths(final RDD<?> rdd) {
         if (rdd instanceof HadoopRDD) {
             return Arrays.asList(
                     org.apache.hadoop.mapred.FileInputFormat.getInputPaths(

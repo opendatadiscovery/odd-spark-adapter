@@ -6,8 +6,8 @@ import org.apache.spark.SparkContext;
 @Slf4j
 class VisitorFactoryProvider {
 
-  static VisitorFactory getInstance(SparkContext context) {
-    log.info("Spark version: {}", context.version());
-    return new VisitorFactoryImpl();
-  }
+    static VisitorFactory getInstance(final SparkContext context) {
+        log.info("Spark version: {}", context.version());
+        return new VisitorFactoryImpl();
+    }
 }
