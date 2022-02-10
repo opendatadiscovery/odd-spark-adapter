@@ -18,7 +18,3 @@ jobs:
           cache: gradle
       - name: Build with Gradle
         run: ./gradlew jar
-      - uses: actions/upload-artifact@v2
-        with:
-          name: Package
-          path: build/libs
