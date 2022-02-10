@@ -94,7 +94,9 @@ public class DataEntityMapper {
         try {
             final Map props = properties;
             final OffsetDateTime startTime = OffsetDateTime
-                    .ofInstant(Instant.ofEpochMilli(Long.parseLong(properties.getProperty(SPARK_APP_START_TIME))), UTC);
+                    .ofInstant(Instant.ofEpochMilli(Long.parseLong(Optional
+                            .ofNullable(properties.getProperty(SPARK_APP_START_TIME))
+                            .orElse(String.valueOf(Instant.now().toEpochMilli())))), UTC);
             return new DataEntity()
                     .name(run)
                     .createdAt(startTime)

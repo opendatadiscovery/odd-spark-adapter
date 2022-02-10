@@ -33,6 +33,7 @@ public class LogicalRelationVisitorTest {
         final JDBCRelation relation = mock(JDBCRelation.class);
         when(relation.jdbcOptions()).thenReturn(mock(JDBCOptions.class));
         when(relation.jdbcOptions().url()).thenReturn("jdbc:mysql://source-db:3306/mta_data");
+        when(relation.jdbcOptions().tableOrQuery()).thenReturn("mta_reports");
         when(relation.jdbcOptions().parameters()).thenReturn(mock(CaseInsensitiveMap.class));
         when(relation.jdbcOptions().parameters().get(JDBCOptions.JDBC_TABLE_NAME()))
                 .thenReturn(Option.apply("mta_reports"));
