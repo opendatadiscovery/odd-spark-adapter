@@ -17,7 +17,7 @@ jobs:
           distribution: 'adopt'
           cache: gradle
       - name: Build with Gradle
-        run: ./gradlew jar
+        run: ./gradlew test jar
       - name: Archive test report
         uses: actions/upload-artifact@v2
         with:
