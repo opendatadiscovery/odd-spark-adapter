@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.provectus'
-version = '0.0.1-SNAPSHOT'
+version = file('VERSION').text
 sourceCompatibility = '8'
 
 repositories {
