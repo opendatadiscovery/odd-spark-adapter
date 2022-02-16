@@ -20,7 +20,7 @@ public class InsertIntoHadoopFsRelationVisitor
                         Optional.ofNullable(command)
                                 .map(InsertIntoHadoopFsRelationCommand::outputPath)
                                 .map(Path::toUri)
-                                .orElseThrow()
+                                .orElseThrow(IllegalStateException::new)
                 )
         );
     }

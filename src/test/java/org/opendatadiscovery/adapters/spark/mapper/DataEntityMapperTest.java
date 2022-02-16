@@ -1,12 +1,11 @@
 package org.opendatadiscovery.adapters.spark.mapper;
 
+import java.time.Instant;
+import java.util.Properties;
 import org.apache.spark.scheduler.SparkListenerJobStart;
 import org.junit.jupiter.api.Test;
 import org.opendatadiscovery.client.model.DataEntity;
 import org.opendatadiscovery.client.model.DataEntityType;
-
-import java.time.Instant;
-import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -17,8 +16,8 @@ public class DataEntityMapperTest {
 
     @Test
     public void jobDateEntityMapperTest() {
-        DataEntity jobRunDataEntity = mockSparkListenerJobStart();
-        DataEntity jobDataEntity = DataEntityMapper.map(jobRunDataEntity);
+        final DataEntity jobRunDataEntity = mockSparkListenerJobStart();
+        final DataEntity jobDataEntity = DataEntityMapper.map(jobRunDataEntity);
         assertEquals(DataEntityType.JOB, jobDataEntity.getType());
         assertEquals("//spark/host/spark-master/jobs/etl-app",
                 jobDataEntity.getOddrn());
@@ -26,7 +25,7 @@ public class DataEntityMapperTest {
 
     @Test
     public void jobRunDateEntityMapperTest() {
-        DataEntity dataEntity = mockSparkListenerJobStart();
+        final DataEntity dataEntity = mockSparkListenerJobStart();
         assertEquals("//spark/host/spark-master/jobs/etl-app/runs/app-20211204075250-0013",
                 dataEntity.getOddrn());
         assertEquals(DataEntityType.JOB_RUN, dataEntity.getType());
@@ -36,7 +35,7 @@ public class DataEntityMapperTest {
     }
 
     private DataEntity mockSparkListenerJobStart() {
-        SparkListenerJobStart jobStart = mock(SparkListenerJobStart.class);
+        final SparkListenerJobStart jobStart = mock(SparkListenerJobStart.class);
         when(jobStart.time()).thenReturn(Instant.now().toEpochMilli());
         when(jobStart.properties()).thenReturn(mock(Properties.class));
         when(jobStart.properties().getProperty(DataEntityMapper.SPARK_MASTER)).thenReturn("spark://spark-master:7077");

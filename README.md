@@ -47,7 +47,7 @@ To start ETL job using OddAdapterSparkListener
 ```sh
 ./spark-submit \
 --master spark://spark-master:7077 \
---jars /opt/spark-apps/postgresql-42.2.22.jar,/opt/spark-apps/mysql-connector-java-8.0.26.jar,/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar \
+--jars /opt/spark-apps/postgresql-42.2.22.jar,/opt/spark-apps/mysql-connector-java-8.0.26.jar,/opt/spark-apps/odd-spark-adapter-0.0.1.jar \
 --driver-memory 1G --executor-memory 1G \
 --conf spark.extraListeners=org.opendatadiscovery.adapters.spark.OddAdapterSparkListener \
 --conf spark.odd.host.url=http://host.docker.internal:8080  \
@@ -60,7 +60,7 @@ To start ETL job using SparkAgent
 --driver-memory 1G \
 --executor-memory 1G \
 --jars /opt/spark-apps/postgresql-42.2.22.jar,/opt/spark-apps/mysql-connector-java-8.0.26.jar \
---driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar=http://host.docker.internal:8080" \
+--driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1.jar=http://host.docker.internal:8080" \
 /opt/spark-apps/mysql_pg_job.py
 ```
 
@@ -69,7 +69,7 @@ To start ETL job using SparkAgent
 --master spark://spark-master:7077 \
 --driver-memory 1G \
 --executor-memory 1G \
---driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar=http://host.docker.internal:8080" \
+--driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1.jar=http://host.docker.internal:8080" \
 /opt/spark-apps/word_count.py
 ```
 
@@ -78,7 +78,7 @@ To start ETL job using SparkAgent
 --master spark://spark-master:7077 \
 --driver-memory 1G \
 --executor-memory 1G \
---driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1-SNAPSHOT.jar=http://host.docker.internal:8080" \
+--driver-java-options "-javaagent:/opt/spark-apps/odd-spark-adapter-0.0.1.jar=http://host.docker.internal:8080" \
 --jars /opt/spark-apps/aws-java-sdk-bundle-1.11.874.jar,/opt/spark-apps/hadoop-aws-3.2.0.jar \
 /opt/spark-apps/s3-aws-word-count.py
 ```
@@ -89,7 +89,7 @@ aws glue start-job-run \
 --job-name odd-spark-adapter-test \
 --profile odd \
 --region eu-central-1 \
---arguments='--extra-jars="s3://spark-adapter-test/jars/odd-spark-adapter-0.0.1-SNAPSHOT.jar",
+--arguments='--extra-jars="s3://spark-adapter-test/jars/odd-spark-adapter-0.0.1.jar",
   --conf="spark.extraListeners=org.opendatadiscovery.adapters.spark.OddAdapterSparkListener",
   --odd.host.url="http://host.docker.internal:8080"'
 ```
