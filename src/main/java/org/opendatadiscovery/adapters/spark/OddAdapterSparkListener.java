@@ -60,7 +60,7 @@ import static java.time.ZoneOffset.UTC;
 public class OddAdapterSparkListener extends SparkListener {
     public static final String ODD_HOST_CONFIG_KEY = "odd.host.url";
     public static final String SPARK_SQL_EXECUTION_ID = "spark.sql.execution.id";
-    public static final String LOCAL_ = "local-";
+    public static final String LOCAL = "local-";
     public static final String FILE = "file://";
 
     private final List<DataEntity> inputs = Collections.synchronizedList(new ArrayList<>());
@@ -159,9 +159,9 @@ public class OddAdapterSparkListener extends SparkListener {
         dataEntity.setCreatedAt(null);
         final DataTransformerRun dataTransformerRun = dataEntity.getDataTransformerRun();
         if (dataTransformerRun != null) {
-            if (dataEntity.getName().contains(LOCAL_)) {
-                dataEntity.setOddrn(dataEntity.getOddrn().replace(dataEntity.getName(), LOCAL_));
-                dataEntity.setName(LOCAL_);
+            if (dataEntity.getName().contains(LOCAL)) {
+                dataEntity.setOddrn(dataEntity.getOddrn().replace(dataEntity.getName(), LOCAL));
+                dataEntity.setName(LOCAL);
             }
             dataTransformerRun
                     .startTime(null)
