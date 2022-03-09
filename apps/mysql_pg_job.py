@@ -4,19 +4,18 @@ from pyspark.sql.functions import col,date_format
 def init_spark():
   return SparkSession.builder\
     .appName("etl-app")\
-    .config("spark.jars", "/opt/spark-apps/mysql-connector-java-8.0.26.jar,/opt/spark-apps/postgresql-42.2.22.jar")\
+    .config("spark.jars", "apps/mysql-connector-java-8.0.26.jar,apps/postgresql-42.2.22.jar")\
     .getOrCreate()
 
 def main():
-
-  source_url = "jdbc:mysql://source-db:3306/mta_data"
+  source_url = "jdbc:mysql://localhost:3366/mta_data"
   source_properties = {
     "user": "root",
     "password": "password",
     "driver": "com.mysql.cj.jdbc.Driver"
   }
 
-  target_url = "jdbc:postgresql://target-db:5432/mta_data"
+  target_url = "jdbc:postgresql://localhost:5432/mta_data"
   target_properties = {
     "user": "postgres",
     "password": "casa1234",
@@ -29,9 +28,7 @@ def main():
   table = 'mta_reports'
 
   df = spark.read.jdbc(url=source_url, table=query, properties=source_properties)
-
   df.show()
-  # df.count()
   
   # Filter invalid coordinates and transform
   df \
@@ -41,6 +38,8 @@ def main():
     .drop("report_date") \
     .drop("id") \
     .write.jdbc(url=target_url, table='mta_transform', mode='overwrite', properties=target_properties)
+
+  spark.stop()
   
 if __name__ == '__main__':
   main()
