@@ -9,8 +9,8 @@ import java.nio.file.Paths;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
-import org.junit.jupiter.api.Test;
 import org.apache.spark.launcher.SparkLauncher;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertLinesMatch;
@@ -22,11 +22,11 @@ public class OddSparkAdapterIT {
     @Test
     public void sqlJobTest() {
         final String outputFile = "sqlJobTest-" + UUID.randomUUID();
-        Process proc = sparkSubmit("src/test/java/org/opendatadiscovery/adapters/spark/mysql_pg_job.py",
+        final Process proc = sparkSubmit("apps/mysql_pg_job.py",
                 outputFile,
                 "apps/postgresql-42.2.22.jar,apps/mysql-connector-java-8.0.26.jar");
         logging(proc, "sqlJobTest");
-        int exitCode = proc.waitFor();
+        final int exitCode = proc.waitFor();
         assertEquals(0, exitCode, "sqlJobTest finished with exit code: " + exitCode);
         assertLinesMatch(
                 Files.lines(Paths.get("data/sqlJobTest.output")),
@@ -38,11 +38,11 @@ public class OddSparkAdapterIT {
     @Test
     public void customS3JobTest() {
         final String outputFile = "customS3JobTest-" + UUID.randomUUID();
-        Process proc = sparkSubmit("src/test/java/org/opendatadiscovery/adapters/spark/s3-custom-word-count.py",
+        final Process proc = sparkSubmit("apps/s3-custom-word-count.py",
                 outputFile,
                 "apps/aws-java-sdk-bundle-1.11.874.jar,apps/hadoop-aws-3.2.0.jar");
         logging(proc, "customS3JobTest");
-        int exitCode = proc.waitFor();
+        final int exitCode = proc.waitFor();
         assertEquals(0, exitCode, "customS3JobTest finished with exit code: " + exitCode);
         assertLinesMatch(
                 Files.lines(Paths.get("data/customS3JobTest.output")),
@@ -54,10 +54,10 @@ public class OddSparkAdapterIT {
     @Test
     public void hdfsJobTest() {
         final String outputFile = "hdfsJobTest-" + UUID.randomUUID();
-        Process proc = sparkSubmit("src/test/java/org/opendatadiscovery/adapters/spark/word-count.py",
+        final Process proc = sparkSubmit("apps/word-count.py",
                 outputFile);
         logging(proc, "hdfsJobTest");
-        int exitCode = proc.waitFor();
+        final int exitCode = proc.waitFor();
         assertEquals(1, exitCode, "hdfsJobTest finished with exit code: " + exitCode);
         assertLinesMatch(
                 Files.lines(Paths.get("data/hdfsJobTest.output")),
@@ -66,8 +66,8 @@ public class OddSparkAdapterIT {
     }
 
     @SneakyThrows
-    private Process sparkSubmit(final String appResource, final String outputFile, String... jars) {
-        SparkLauncher spark = new SparkLauncher()
+    private Process sparkSubmit(final String appResource, final String outputFile, final String... jars) {
+        final SparkLauncher spark = new SparkLauncher()
                 .setVerbose(true)
                 .setMaster("local")
                 .setSparkHome("spark")
@@ -91,7 +91,7 @@ public class OddSparkAdapterIT {
         private final String name;
         private final BufferedReader reader;
 
-        public InputStreamReaderRunnable(InputStream is, String name) {
+        public InputStreamReaderRunnable(final InputStream is, final String name) {
             this.name = name;
             this.reader = new BufferedReader(new InputStreamReader(is));
         }
@@ -105,11 +105,9 @@ public class OddSparkAdapterIT {
                     System.out.println(name + ":" + line);
                     line = reader.readLine();
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 System.out.println(name + ":run() failed with error message: " + e.getMessage());
-            }
-            finally {
+            } finally {
                 reader.close();
             }
         }
