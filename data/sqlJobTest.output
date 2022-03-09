@@ -1,0 +1,55 @@
+class DataEntityList {
+    dataSourceOddrn: //spark/host/local
+    items: [class DataEntity {
+        oddrn: //spark/host/local/jobs/etl-app
+        name: /etl-app
+        description: null
+        owner: null
+        metadata: [class MetadataExtension {
+            schemaUrl: null
+            metadata: null
+        }]
+        updatedAt: null
+        createdAt: null
+        type: JOB
+        dataset: null
+        dataTransformer: class DataTransformer {
+            sourceCodeUrl: null
+            sql: (select * from mta_reports r left join vehicle v on r.vehicle_id = v.id) mta_rep_view
+            inputs: [//mysql/host/localhost/databases/mta_data/tables/mta_reports, //mysql/host/localhost/databases/mta_data/tables/vehicle]
+            outputs: [//postgresql/host/localhost/databases/mta_data/schemas/public/tables/mta_transform]
+        }
+        dataTransformerRun: null
+        dataQualityTest: null
+        dataQualityTestRun: null
+        dataInput: null
+        dataConsumer: null
+        dataEntityGroup: null
+    }, class DataEntity {
+        oddrn: //spark/host/local/jobs/etl-app/runs/local-
+        name: local-
+        description: null
+        owner: null
+        metadata: [class MetadataExtension {
+            schemaUrl: null
+            metadata: null
+        }]
+        updatedAt: null
+        createdAt: null
+        type: JOB_RUN
+        dataset: null
+        dataTransformer: null
+        dataTransformerRun: class DataTransformerRun {
+            transformerOddrn: //spark/host/local/jobs/etl-app
+            startTime: null
+            endTime: null
+            statusReason: null
+            status: SUCCESS
+        }
+        dataQualityTest: null
+        dataQualityTestRun: null
+        dataInput: null
+        dataConsumer: null
+        dataEntityGroup: null
+    }]
+}

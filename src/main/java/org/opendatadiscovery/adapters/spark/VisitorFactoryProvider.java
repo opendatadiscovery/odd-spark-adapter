@@ -8,6 +8,6 @@ class VisitorFactoryProvider {
 
     static VisitorFactory getInstance(final SparkContext context) {
         log.info("Spark version: {}", context.version());
-        return new VisitorFactoryImpl();
+        return new VisitorFactoryImpl(context);
     }
 }

@@ -2,6 +2,8 @@ plugins {
     id 'checkstyle'
     id 'java'
     id 'io.freefair.lombok' version '5.0.1'
+    id 'com.avast.gradle.docker-compose' version '0.14.3'
+    id 'de.undercouch.download' version '5.0.0'
 }
 
 group = 'com.provectus'
@@ -36,6 +38,32 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:2.19.0'
     configurations.compile.extendsFrom(configurations.extraLibs)
 }
+
+dockerCompose.isRequiredBy(test)
+
+dockerCompose {
+    useComposeFiles = ['docker-compose.yml']
+    waitForTcpPorts = true
+}
+
+task copySpark() {
+    doLast {
+        exec {
+            executable "./cp_spark.sh"
+        }
+    }
+}
+
+task downloadMultipleFiles(type: Download) {
+    src([
+            'https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.22/postgresql-42.2.22.jar',
+            'https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar',
+            'https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar',
+            'https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.874/aws-java-sdk-bundle-1.11.874.jar'
+    ])
+    dest 'apps'
+}
+test.dependsOn downloadMultipleFiles, copySpark
 
 checkstyle {
     configFile = project(':').file('config/checkstyle/checkstyle.xml')

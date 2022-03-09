@@ -1,0 +1,55 @@
+class DataEntityList {
+    dataSourceOddrn: //spark/host/local
+    items: [class DataEntity {
+        oddrn: //spark/host/local/jobs/s3_job
+        name: /s3_job
+        description: null
+        owner: null
+        metadata: [class MetadataExtension {
+            schemaUrl: null
+            metadata: null
+        }]
+        updatedAt: null
+        createdAt: null
+        type: JOB
+        dataset: null
+        dataTransformer: class DataTransformer {
+            sourceCodeUrl: null
+            sql: null
+            inputs: [//s3-custom/endpoint/http:\\\\127.0.0.1:9000/buckets/test/keys/data.txt]
+            outputs: [//file/Users/dliubimov/projects/java/odd-spark-adapter/data/wc/result/1]
+        }
+        dataTransformerRun: null
+        dataQualityTest: null
+        dataQualityTestRun: null
+        dataInput: null
+        dataConsumer: null
+        dataEntityGroup: null
+    }, class DataEntity {
+        oddrn: //spark/host/local/jobs/s3_job/runs/local-
+        name: local-
+        description: null
+        owner: null
+        metadata: [class MetadataExtension {
+            schemaUrl: null
+            metadata: null
+        }]
+        updatedAt: null
+        createdAt: null
+        type: JOB_RUN
+        dataset: null
+        dataTransformer: null
+        dataTransformerRun: class DataTransformerRun {
+            transformerOddrn: //spark/host/local/jobs/s3_job
+            startTime: null
+            endTime: null
+            statusReason: null
+            status: SUCCESS
+        }
+        dataQualityTest: null
+        dataQualityTestRun: null
+        dataInput: null
+        dataConsumer: null
+        dataEntityGroup: null
+    }]
+}

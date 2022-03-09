@@ -1,0 +1,55 @@
+class DataEntityList {
+    dataSourceOddrn: //spark/host/local
+    items: [class DataEntity {
+        oddrn: //spark/host/local/jobs/Word count
+        name: /Word count
+        description: null
+        owner: null
+        metadata: [class MetadataExtension {
+            schemaUrl: null
+            metadata: null
+        }]
+        updatedAt: null
+        createdAt: null
+        type: JOB
+        dataset: null
+        dataTransformer: class DataTransformer {
+            sourceCodeUrl: null
+            sql: null
+            inputs: [//hdfs/site/localhost:9010/paths/\\user\\root\\data.txt]
+            outputs: [//hdfs/site/localhost:9010/paths/\\user\\root\\result\\1]
+        }
+        dataTransformerRun: null
+        dataQualityTest: null
+        dataQualityTestRun: null
+        dataInput: null
+        dataConsumer: null
+        dataEntityGroup: null
+    }, class DataEntity {
+        oddrn: //spark/host/local/jobs/Word count/runs/local-
+        name: local-
+        description: null
+        owner: null
+        metadata: [class MetadataExtension {
+            schemaUrl: null
+            metadata: null
+        }]
+        updatedAt: null
+        createdAt: null
+        type: JOB_RUN
+        dataset: null
+        dataTransformer: null
+        dataTransformerRun: class DataTransformerRun {
+            transformerOddrn: //spark/host/local/jobs/Word count
+            startTime: null
+            endTime: null
+            statusReason: null
+            status: FAILED
+        }
+        dataQualityTest: null
+        dataQualityTestRun: null
+        dataInput: null
+        dataConsumer: null
+        dataEntityGroup: null
+    }]
+}

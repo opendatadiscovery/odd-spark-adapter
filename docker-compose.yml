@@ -1,52 +1,31 @@
 version: "3.3"
 
 services:
-  spark-master:
-    image: cluster-apache-spark:3.0.2
+  spark:
+    image: docker.io/bitnami/spark:3.1.2
+    container_name: spark_master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
     ports:
-      - "9090:8080"
-      - "7077:7077"
+      - '9090:8080'
     volumes:
       - ./apps:/opt/spark-apps
       - ./data:/opt/spark-data
+  spark-worker:
+    image: docker.io/bitnami/spark:3.1.2
     environment:
-      - SPARK_LOCAL_IP=spark-master
-      - SPARK_WORKLOAD=master
-
-  spark-worker-a:
-    image: cluster-apache-spark:3.0.2
-    ports:
-      - "9091:8080"
-      - "7000:7000"
-    depends_on:
-      - spark-master
-    environment:
-      - SPARK_MASTER=spark://spark-master:7077
-      - SPARK_WORKER_CORES=1
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
       - SPARK_WORKER_MEMORY=1G
-      - SPARK_DRIVER_MEMORY=1G
-      - SPARK_EXECUTOR_MEMORY=1G
-      - SPARK_WORKLOAD=worker
-      - SPARK_LOCAL_IP=spark-worker-a
-    volumes:
-      - ./apps:/opt/spark-apps
-      - ./data:/opt/spark-data
-
-  spark-worker-b:
-    image: cluster-apache-spark:3.0.2
-    ports:
-      - "9092:8080"
-      - "7001:7000"
-    depends_on:
-      - spark-master
-    environment:
-      - SPARK_MASTER=spark://spark-master:7077
       - SPARK_WORKER_CORES=1
-      - SPARK_WORKER_MEMORY=1G
-      - SPARK_DRIVER_MEMORY=1G
-      - SPARK_EXECUTOR_MEMORY=1G
-      - SPARK_WORKLOAD=worker
-      - SPARK_LOCAL_IP=spark-worker-b
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
     volumes:
       - ./apps:/opt/spark-apps
       - ./data:/opt/spark-data
@@ -60,7 +39,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: password
     volumes:
-      - ./dump/mysql:/docker-entrypoint-initdb.d
+      - ./data/dump/mysql:/docker-entrypoint-initdb.d
 
   target-db:
     image: postgres:11.7-alpine
@@ -69,17 +48,38 @@ services:
     environment:
       - POSTGRES_PASSWORD=casa1234
     volumes:
-      - ./dump/pg:/docker-entrypoint-initdb.d
+      - ./data/dump/pg:/docker-entrypoint-initdb.d
 
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8787:8080
+  #adminer:
+  #  image: adminer
+  #  restart: always
+  #  ports:
+  #    - 8787:8080
 
   minio:
     image: minio/minio
     ports:
       - "9000:9000"
       - "9001:9001"
+    volumes:
+      - ./data/minio:/data
     command: "server /data --console-address \":9001\""
+
+  master:
+    image: modenaf360/hadoop-3.2:latest
+    container_name: master
+    hostname: master
+    volumes:
+      - ./data/masterdata:/hadoop/dfs/name
+      - ./data/datanode:/hadoop/dfs/data
+    environment:
+      - CLUSTER_NAME=test
+      - NODE_TYPE=namenode
+      - GOTTY_ID=modenaf360
+      - GOTTY_PW=1234
+    env_file:
+      - hadoop.env
+    ports:
+      - 8989:7777
+      #- 50070:50070/tcp
+      - 9010:9010/tcp

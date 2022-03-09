@@ -2,6 +2,9 @@ package org.opendatadiscovery.adapters.spark;
 
 import java.lang.reflect.Field;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -11,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.WeakHashMap;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.SparkConf;
@@ -28,7 +32,6 @@ import org.apache.spark.scheduler.SparkListenerApplicationStart;
 import org.apache.spark.scheduler.SparkListenerEvent;
 import org.apache.spark.scheduler.SparkListenerJobEnd;
 import org.apache.spark.scheduler.SparkListenerJobStart;
-import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.QueryExecution;
@@ -47,6 +50,7 @@ import org.opendatadiscovery.client.model.DataEntityList;
 import org.opendatadiscovery.client.model.DataTransformerRun;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
 
@@ -56,6 +60,8 @@ import static java.time.ZoneOffset.UTC;
 public class OddAdapterSparkListener extends SparkListener {
     public static final String ODD_HOST_CONFIG_KEY = "odd.host.url";
     public static final String SPARK_SQL_EXECUTION_ID = "spark.sql.execution.id";
+    public static final String LOCAL_ = "local-";
+    public static final String FILE = "file://";
 
     private final List<DataEntity> inputs = Collections.synchronizedList(new ArrayList<>());
 
@@ -115,6 +121,7 @@ public class OddAdapterSparkListener extends SparkListener {
         log.info("onApplicationStart: {}", applicationStart);
     }
 
+    @SneakyThrows
     @Override
     public void onApplicationEnd(final SparkListenerApplicationEnd applicationEnd) {
         log.info("onApplicationEnd: {} jobsCount {}", applicationEnd, jobCount);
@@ -123,19 +130,46 @@ public class OddAdapterSparkListener extends SparkListener {
         log.info("{}", dataEntityList);
         final SparkConf conf = SparkEnv$.MODULE$.get().conf();
         final String host = ScalaConversionUtils.findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY)
-                .map(x -> PROPERTIES.getProperty(ODD_HOST_CONFIG_KEY))
-                .orElse(Utils.getProperty(System.getProperties(), ODD_HOST_CONFIG_KEY));
-        if (host != null) {
-            log.info("Setting ODD host {}", host);
-            final OpenDataDiscoveryIngestionApi client = new OpenDataDiscoveryIngestionApi(new ApiClient()
-                    .setBasePath(host));
-            final Mono<ResponseEntity<Void>> res = client.postDataEntityListWithHttpInfo(dataEntityList);
-            log.info("POST - {}", res.blockOptional()
-                    .map(ResponseEntity::getStatusCode)
-                    .map(HttpStatus::getReasonPhrase)
-                    .orElse(""));
-        } else {
+                .orElse(Optional.ofNullable(PROPERTIES.getProperty(ODD_HOST_CONFIG_KEY))
+                        .orElse(Utils.getProperty(System.getProperties(), ODD_HOST_CONFIG_KEY)));
+        if (host == null) {
             log.warn("No ODD host configured");
+            return;
+        }
+        if (host.startsWith(FILE)) {
+            final String fileName = host.replace(FILE, "");
+            if (!CollectionUtils.isEmpty(dataEntityList.getItems())) {
+                dataEntityList.getItems().forEach(this::tweak);
+            }
+            Files.write(Paths.get(fileName), dataEntityList.toString().getBytes(StandardCharsets.UTF_8));
+            log.info("Saved to file {}", fileName);
+            return;
+        }
+        log.info("Setting ODD host {}", host);
+        final OpenDataDiscoveryIngestionApi client = new OpenDataDiscoveryIngestionApi(new ApiClient()
+                .setBasePath(host));
+        final Mono<ResponseEntity<Void>> res = client.postDataEntityListWithHttpInfo(dataEntityList);
+        log.info("POST - {}", res.blockOptional()
+                .map(ResponseEntity::getStatusCode)
+                .map(HttpStatus::getReasonPhrase)
+                .orElse(""));
+    }
+
+    private void tweak(final DataEntity dataEntity) {
+        dataEntity.setCreatedAt(null);
+        final DataTransformerRun dataTransformerRun = dataEntity.getDataTransformerRun();
+        if (dataTransformerRun != null) {
+            if (dataEntity.getName().contains(LOCAL_)) {
+                dataEntity.setOddrn(dataEntity.getOddrn().replace(dataEntity.getName(), LOCAL_));
+                dataEntity.setName(LOCAL_);
+            }
+            dataTransformerRun
+                    .startTime(null)
+                    .endTime(null)
+                    .statusReason(null);
+        }
+        if (!CollectionUtils.isEmpty(dataEntity.getMetadata())) {
+            dataEntity.getMetadata().get(0).setMetadata(null);
         }
     }
 
@@ -227,10 +261,9 @@ public class OddAdapterSparkListener extends SparkListener {
         if (queryExecution != null) {
             final VisitorFactory visitorFactory = VisitorFactoryProvider.getInstance(SparkContext.getOrCreate());
             final LogicalPlan logicalPlan = queryExecution.logical();
-            final SQLContext sqlContext = queryExecution.sparkPlan().sqlContext();
-            final List<DataEntity> inputs = apply(visitorFactory.getInputVisitors(sqlContext), logicalPlan);
+            final List<DataEntity> inputs = apply(visitorFactory.getInputVisitors(null), logicalPlan);
             if (inputs.isEmpty()) {
-                final List<DataEntity> outputs = apply(visitorFactory.getOutputVisitors(sqlContext), logicalPlan);
+                final List<DataEntity> outputs = apply(visitorFactory.getOutputVisitors(null), logicalPlan);
                 this.outputs.addAll(outputs);
             } else {
                 this.inputs.addAll(inputs);
