@@ -227,10 +227,10 @@ public class OddAdapterSparkListener extends SparkListener {
         if (queryExecution != null) {
             final VisitorFactory visitorFactory = VisitorFactoryProvider.getInstance(SparkContext.getOrCreate());
             final LogicalPlan logicalPlan = queryExecution.logical();
-            final SQLContext sqlContext = queryExecution.sparkPlan().sqlContext();
-            final List<DataEntity> inputs = apply(visitorFactory.getInputVisitors(sqlContext), logicalPlan);
+            final SparkContext sparkContext = queryExecution.sparkPlan().sparkContext();
+            final List<DataEntity> inputs = apply(visitorFactory.getInputVisitors(sparkContext), logicalPlan);
             if (inputs.isEmpty()) {
-                final List<DataEntity> outputs = apply(visitorFactory.getOutputVisitors(sqlContext), logicalPlan);
+                final List<DataEntity> outputs = apply(visitorFactory.getOutputVisitors(), logicalPlan);
                 this.outputs.addAll(outputs);
             } else {
                 this.inputs.addAll(inputs);
