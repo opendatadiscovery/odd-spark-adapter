@@ -8,7 +8,7 @@ RUN update-alternatives --install "/usr/bin/python" "python" "$(which python3)" 
 
 # Fix the value of PYTHONHASHSEED
 # Note: this is needed when you use Python 3.3 or greater
-ENV SPARK_VERSION=3.0.2 \
+ENV SPARK_VERSION=3.2.1 \
 HADOOP_VERSION=3.2 \
 SPARK_HOME=/opt/spark \
 PYTHONHASHSEED=1
@@ -44,5 +44,7 @@ ln -sf /dev/stdout $SPARK_MASTER_LOG && \
 ln -sf /dev/stdout $SPARK_WORKER_LOG
 
 COPY start-spark.sh /
+
+RUN python3 -m pip install delta-spark==1.1.0
 
 CMD ["/bin/bash", "/start-spark.sh"]

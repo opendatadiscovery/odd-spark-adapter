@@ -10,7 +10,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkContext;
 import org.opendatadiscovery.oddrn.Generator;
 import org.opendatadiscovery.oddrn.JdbcUrlParser;
-import org.opendatadiscovery.oddrn.model.AwsS3Path;
+import org.opendatadiscovery.oddrn.annotation.PathField;
 import org.opendatadiscovery.oddrn.model.CustomS3Path;
 import org.opendatadiscovery.oddrn.model.HdfsPath;
 import org.opendatadiscovery.oddrn.model.MysqlPath;
@@ -84,8 +84,9 @@ public class Utils {
         return "//" + namespace + file.replace(namespace + ":/", "");
     }
 
+
     public static String s3Generator(final String namespace, final String path) {
-        String bucket = "";
+        String bucket;
         String endpoint = "";
         if (namespace.contains(S3A)) {
             bucket = namespace.replace(S3A, "");

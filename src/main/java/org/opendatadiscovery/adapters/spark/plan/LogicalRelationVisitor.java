@@ -1,9 +1,5 @@
 package org.opendatadiscovery.adapters.spark.plan;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -13,6 +9,7 @@ import org.apache.spark.SparkContext;
 import org.apache.spark.sql.catalyst.catalog.CatalogTable;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.catalyst.plans.logical.UnaryNode;
+import org.apache.spark.sql.execution.LogicalRDD;
 import org.apache.spark.sql.execution.datasources.HadoopFsRelation;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
@@ -20,6 +17,13 @@ import org.opendatadiscovery.adapters.spark.mapper.DataEntityMapper;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
 import org.opendatadiscovery.client.model.DataEntity;
 import scala.collection.JavaConversions;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, DataEntity> {
@@ -36,47 +40,68 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
 
     @Override
     public List<DataEntity> apply(final LogicalPlan logicalPlan) {
-        final LogicalRelation logRel = findLogicalRelation(logicalPlan);
+        final Optional<LogicalRelation> logRelOpt = findLogicalRelation(logicalPlan);
+
+        if (!logRelOpt.isPresent()) {
+            return new ArrayList<>();
+        }
+
+        final LogicalRelation logRel = logRelOpt.get();
+
         if (logRel.relation() instanceof HadoopFsRelation) {
-            return handleHadoopFsRelation((HadoopFsRelation) logRel.relation());
+            return handleDelta((HadoopFsRelation) logRel.relation());
         } else if (logRel.relation() instanceof JDBCRelation) {
             return handleJdbcRelation((JDBCRelation) logRel.relation());
         } else if (logRel.catalogTable().isDefined()) {
             return handleCatalogTable(logRel);
         }
         throw new IllegalArgumentException(
-                "Expected logical plan to be either HadoopFsRelation, JDBCRelation, "
-                        + "or CatalogTable but was "
-                        + logicalPlan);
+            "Expected logical plan to be either HadoopFsRelation, JDBCRelation, "
+                + "or CatalogTable but was "
+                + logicalPlan);
     }
 
-    private LogicalRelation findLogicalRelation(final LogicalPlan logicalPlan) {
-        if (logicalPlan instanceof LogicalRelation) {
-            return (LogicalRelation) logicalPlan;
+    private Optional<LogicalRelation> findLogicalRelation(final LogicalPlan logicalPlan) {
+        if (logicalPlan instanceof LogicalRDD) {
+            return Optional.empty();
         }
+
+        if (logicalPlan instanceof LogicalRelation) {
+            return Optional.of((LogicalRelation) logicalPlan);
+        }
+
         return findLogicalRelation(((UnaryNode) logicalPlan).child());
     }
 
     private List<DataEntity> handleCatalogTable(final LogicalRelation logRel) {
         final CatalogTable catalogTable = logRel.catalogTable().get();
         return Collections.singletonList(new DataEntity()
-                .oddrn(catalogTable.location().getPath())
+            .oddrn(catalogTable.location().getPath())
         );
+    }
+
+    private List<DataEntity> handleDelta(final HadoopFsRelation relation) {
+        return JavaConversions.asJavaCollection(relation.location().rootPaths()).stream()
+            .map(p -> Utils.getDirectoryPath(p, context.hadoopConfiguration()))
+            .distinct()
+            .map(path -> DataEntityMapper.map(Utils.namespaceUri(path.toUri()), path.toString()))
+            .collect(Collectors.toList());
     }
 
     private List<DataEntity> handleHadoopFsRelation(final HadoopFsRelation relation) {
         return JavaConversions.asJavaCollection(relation.location().rootPaths()).stream()
-                .map(p -> Utils.getDirectoryPath(p, context.hadoopConfiguration()))
-                .distinct()
-                .map(
-                        path -> {
-                            final String namespace = Utils.namespaceUri(path.toUri());
-                            final String file = Arrays.stream(relation.location().inputFiles())
-                                    .filter(f -> f.contains(namespace))
-                                    .collect(Collectors.joining());
-                            return DataEntityMapper.map(namespace, file);
-                        })
-                .collect(Collectors.toList());
+            .map(p -> Utils.getDirectoryPath(p, context.hadoopConfiguration()))
+            .distinct()
+            .map(
+                path -> {
+                    final String namespace = Utils.namespaceUri(path.toUri());
+                    final String file = Arrays.stream(relation.location().inputFiles())
+                        .filter(f -> f.contains(namespace))
+                        .collect(Collectors.joining());
+
+                    return DataEntityMapper.map(namespace, file);
+                })
+            .collect(Collectors.toList());
     }
 
     private List<DataEntity> handleJdbcRelation(final JDBCRelation relation) {
@@ -87,7 +112,7 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation, Da
             return Collections.singletonList(DataEntityMapper.map(null, url, tableOrQuery));
         }
         return tables.stream().map(tableName -> DataEntityMapper.map(tableOrQuery, url, tableName))
-                .collect(Collectors.toList());
+            .collect(Collectors.toList());
     }
 
     private List<String> extractTableNames(final String tableOrQuery) {

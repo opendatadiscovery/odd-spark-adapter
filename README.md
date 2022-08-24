@@ -32,7 +32,7 @@ Further development may include:
 
 ## Build
 ```sh
-mvn clean package -dskipTests
+gradle build
 ```
 
 `spark.odd.host.url` used to specify ODD platform host url.
