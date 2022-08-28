@@ -122,9 +122,10 @@ public class OddAdapterSparkListener extends SparkListener {
         final DataEntityList dataEntityList = DataEntityMapper.map(dataEntity, inputs, outputs);
         log.info("{}", dataEntityList);
         final SparkConf conf = SparkEnv$.MODULE$.get().conf();
+
         final String host = ScalaConversionUtils.findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY)
-                .map(x -> PROPERTIES.getProperty(ODD_HOST_CONFIG_KEY))
                 .orElse(Utils.getProperty(System.getProperties(), ODD_HOST_CONFIG_KEY));
+
         if (host != null) {
             log.info("Setting ODD host {}", host);
             final OpenDataDiscoveryIngestionApi client = new OpenDataDiscoveryIngestionApi(new ApiClient()
