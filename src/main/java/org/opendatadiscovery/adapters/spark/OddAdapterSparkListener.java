@@ -123,7 +123,6 @@ public class OddAdapterSparkListener extends SparkListener {
         log.info("{}", dataEntityList);
         final SparkConf conf = SparkEnv$.MODULE$.get().conf();
         final String host = ScalaConversionUtils.findSparkConfigKey(conf, ODD_HOST_CONFIG_KEY)
-                .map(x -> PROPERTIES.getProperty(ODD_HOST_CONFIG_KEY))
                 .orElse(Utils.getProperty(System.getProperties(), ODD_HOST_CONFIG_KEY));
         if (host != null) {
             log.info("Setting ODD host {}", host);
