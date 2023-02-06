@@ -7,7 +7,5 @@ import org.opendatadiscovery.adapters.spark.plan.QueryPlanVisitor;
 import java.util.List;
 
 interface VisitorFactory {
-    List<QueryPlanVisitor<? extends LogicalPlan, String>> getVisitors(final SparkContext sparkContext);
-
-    List<QueryPlanVisitor> getOutputVisitors();
+    List<QueryPlanVisitor<? extends LogicalPlan>> getVisitors(final SparkContext sparkContext);
 }

@@ -38,7 +38,7 @@ SNOWFLAKE_SOURCE_NAME = "net.snowflake.spark.snowflake"
 
 df = spark.read.format(SNOWFLAKE_SOURCE_NAME) \
     .options(**sfReadOptions) \
-    .option("query", "select CC_CALL_CENTER_SK, CC_CLASS from CALL_CENTER") \
+    .option("query", "select CC_CALL_CENTER_SK, CC_CLASS from CALL_CENTER LEFT JOIN CATALOG_PAGE ON CATALOG_PAGE.CP_CATALOG_NUMBER = CALL_CENTER.CC_CALL_CENTER_SK") \
     .load() \
     .where("CC_CALL_CENTER_SK <= 10")
 

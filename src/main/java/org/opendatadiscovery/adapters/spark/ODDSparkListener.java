@@ -15,6 +15,7 @@ import org.apache.spark.sql.execution.QueryExecution;
 import org.apache.spark.sql.execution.SQLExecution;
 import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionEnd;
 import org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart;
+import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
 import org.opendatadiscovery.adapters.spark.mapper.DataEntityMapper;
 import org.opendatadiscovery.adapters.spark.mapper.RddMapper;
 import org.opendatadiscovery.adapters.spark.plan.QueryPlanVisitor;
@@ -39,6 +40,8 @@ public class ODDSparkListener extends SparkListener {
     private final Set<String> inputs = Collections.synchronizedSet(new HashSet<>());
     private final Set<String> outputs = Collections.synchronizedSet(new HashSet<>());
 
+    private final Set<LogicalPlanDependencies> lpds = Collections.synchronizedSet(new HashSet<>());
+
     private static final Properties PROPERTIES = new Properties();
 
     private static final WeakHashMap<RDD<?>, Configuration> RDD_CONFIG = new WeakHashMap<>();
@@ -53,7 +56,7 @@ public class ODDSparkListener extends SparkListener {
 
     @Override
     public void onApplicationEnd(final SparkListenerApplicationEnd applicationEnd) {
-        log.info("Final deps: {}", this.inputs);
+        log.info("LPDS: {}", lpds);
 
 //        RDD_CONFIG.clear();
 //        final DataEntityList dataEntityList = DataEntityMapper.map(dataEntity, inputs, outputs);
@@ -147,39 +150,25 @@ public class ODDSparkListener extends SparkListener {
 
     private void sparkSQLExecStart(final long executionId) {
         final QueryExecution queryExecution = SQLExecution.getQueryExecution(executionId);
+        final List<LogicalPlanDependencies> result = new ArrayList<>();
 
         if (queryExecution != null) {
-            final VisitorFactory visitorFactory = VisitorFactoryProvider.getInstance(SparkContext.getOrCreate());
             final LogicalPlan logicalPlan = queryExecution.logical();
 
-            log.info("Found logical plan is: {}", logicalPlan);
+            final List<QueryPlanVisitor<? extends LogicalPlan>> visitors = VisitorFactoryProvider
+                .getInstance(SparkContext.getOrCreate())
+                .getVisitors(queryExecution.sparkPlan().sparkContext());
 
-            final SparkContext sparkContext = queryExecution.sparkPlan().sparkContext();
-            final List<String> inputs = apply(visitorFactory.getVisitors(sparkContext), logicalPlan);
-
-            log.info("INPUTS: {}", inputs);
-
-            this.inputs.addAll(inputs);
-        } else {
-            log.info("OPA NET QE");
-        }
-    }
-
-    private List<String> apply(final List<QueryPlanVisitor<? extends LogicalPlan, String>> visitors,
-                               final LogicalPlan logicalPlan) {
-        final List<String> result = new ArrayList<>();
-        for (final QueryPlanVisitor<? extends LogicalPlan, String> visitor : visitors) {
-            if (visitor.isDefinedAt(logicalPlan)) {
-                result.addAll(visitor.apply(logicalPlan));
+            for (final QueryPlanVisitor<? extends LogicalPlan> visitor : visitors) {
+                if (visitor.isDefinedAt(logicalPlan)) {
+                    result.add(visitor.apply(logicalPlan));
+                }
             }
         }
 
-        return result;
+        lpds.add(LogicalPlanDependencies.merge(result));
     }
 
-    /**
-     * called by the SparkListener when a spark-sql (Dataset api) execution ends.
-     */
     private void sparkSQLExecEnd(final SparkListenerSQLExecutionEnd endEvent) {
         log.info("sparkSQLExecEnd {}", endEvent);
     }

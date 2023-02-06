@@ -2,15 +2,15 @@ package org.opendatadiscovery.adapters.spark.plan;
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.InsertIntoHadoopFsRelationCommand;
+import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
 
 import java.util.Collections;
-import java.util.List;
 
-public class InsertIntoHadoopFsRelationVisitor extends QueryPlanVisitor<InsertIntoHadoopFsRelationCommand, String> {
+public class InsertIntoHadoopFsRelationVisitor extends QueryPlanVisitor<InsertIntoHadoopFsRelationCommand> {
     @Override
-    public List<String> apply(final LogicalPlan logicalPlan) {
+    public LogicalPlanDependencies apply(final LogicalPlan logicalPlan) {
         final InsertIntoHadoopFsRelationCommand command = (InsertIntoHadoopFsRelationCommand) logicalPlan;
 
-        return Collections.singletonList(command.outputPath().toUri().toString());
+        return LogicalPlanDependencies.outputs(Collections.singletonList(command.outputPath().toUri().toString()));
     }
 }

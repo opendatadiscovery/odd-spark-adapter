@@ -1,14 +1,14 @@
 package org.opendatadiscovery.adapters.spark.plan;
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
+import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
 import scala.runtime.AbstractPartialFunction;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.List;
 
-public abstract class QueryPlanVisitor<T extends LogicalPlan, D extends String>
-    extends AbstractPartialFunction<LogicalPlan, List<D>> {
+public abstract class QueryPlanVisitor<T extends LogicalPlan>
+    extends AbstractPartialFunction<LogicalPlan, LogicalPlanDependencies> {
     @Override
     public boolean isDefinedAt(final LogicalPlan logicalPlan) {
         final Type genericSuperclass = getClass().getGenericSuperclass();

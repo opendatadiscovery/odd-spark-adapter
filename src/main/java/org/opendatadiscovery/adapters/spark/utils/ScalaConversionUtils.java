@@ -4,6 +4,7 @@ import org.apache.spark.SparkConf;
 import scala.Function0;
 import scala.Function1;
 import scala.Option;
+import scala.PartialFunction;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import scala.runtime.AbstractFunction0;

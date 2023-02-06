@@ -6,25 +6,19 @@ import org.opendatadiscovery.adapters.spark.plan.InsertIntoHadoopFsRelationVisit
 import org.opendatadiscovery.adapters.spark.plan.LogicalRelationVisitor;
 import org.opendatadiscovery.adapters.spark.plan.QueryPlanVisitor;
 import org.opendatadiscovery.adapters.spark.plan.SaveIntoDataSourceCommandVisitor;
+import org.opendatadiscovery.adapters.spark.plan.SnowflakeRelationVisitor;
 
 import java.util.Arrays;
 import java.util.List;
 
 public class VisitorFactoryImpl implements VisitorFactory {
     @Override
-    public List<QueryPlanVisitor<? extends LogicalPlan, String>> getVisitors(final SparkContext sparkContext) {
+    public List<QueryPlanVisitor<? extends LogicalPlan>> getVisitors(final SparkContext sparkContext) {
         return Arrays.asList(
             new LogicalRelationVisitor(sparkContext),
             new InsertIntoHadoopFsRelationVisitor(),
-            new SaveIntoDataSourceCommandVisitor()
-        );
-    }
-
-    @Override
-    public List<QueryPlanVisitor> getOutputVisitors() {
-        return Arrays.asList(
-            new InsertIntoHadoopFsRelationVisitor(),
-            new SaveIntoDataSourceCommandVisitor()
+            new SaveIntoDataSourceCommandVisitor(),
+            new SnowflakeRelationVisitor()
         );
     }
 }
