@@ -1,10 +1,5 @@
 package org.opendatadiscovery.adapters.spark.utils;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import org.apache.spark.SparkConf;
 import scala.Function0;
 import scala.Function1;
@@ -14,7 +9,15 @@ import scala.collection.Seq;
 import scala.runtime.AbstractFunction0;
 import scala.runtime.AbstractFunction1;
 
-/** Simple conversion utilities for dealing with Scala types. */
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+/**
+ * Simple conversion utilities for dealing with Scala types.
+ */
 public class ScalaConversionUtils {
 
     /**
@@ -43,14 +46,7 @@ public class ScalaConversionUtils {
      * Convert a Scala {@link Option} to a Java {@link Optional}.
      */
     public static <T> Optional<T> asJavaOptional(final Option<T> opt) {
-        return Optional.ofNullable(
-                opt.getOrElse(
-                        new AbstractFunction0<T>() {
-                            @Override
-                            public T apply() {
-                                return null;
-                            }
-                        }));
+        return Optional.ofNullable(opt.getOrElse(() -> null));
     }
 
     /**
@@ -79,7 +75,7 @@ public class ScalaConversionUtils {
 
     public static Optional<String> findSparkConfigKey(final SparkConf conf, final String name) {
         return ScalaConversionUtils.asJavaOptional(
-                conf.getOption(name)
-                        .getOrElse(toScalaFn(() -> conf.getOption("spark." + name))));
+            conf.getOption(name)
+                .getOrElse(toScalaFn(() -> conf.getOption("spark." + name))));
     }
 }

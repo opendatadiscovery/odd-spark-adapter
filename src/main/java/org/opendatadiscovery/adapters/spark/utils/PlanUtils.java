@@ -1,0 +1,227 @@
+package org.opendatadiscovery.adapters.spark.utils;/*
+/* Copyright 2018-2023 contributors to the OpenLineage project
+/* SPDX-License-Identifier: Apache-2.0
+*/
+
+import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.spark.rdd.HadoopRDD;
+import org.apache.spark.rdd.RDD;
+import org.apache.spark.sql.catalyst.expressions.Attribute;
+import org.apache.spark.sql.execution.datasources.FileScanRDD;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+import scala.PartialFunction;
+import scala.PartialFunction$;
+import scala.runtime.AbstractPartialFunction;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+/**
+ * Utility functions for traversing a {@link
+ * org.apache.spark.sql.catalyst.plans.logical.LogicalPlan}.
+ */
+@Slf4j
+public class PlanUtils {
+
+    public static final String SLASH_DELIMITER_USER_PASSWORD_REGEX =
+        "[A-Za-z0-9_%]+//?[A-Za-z0-9_%]*@";
+    public static final String COLON_DELIMITER_USER_PASSWORD_REGEX =
+        "([/|,])[A-Za-z0-9_%]+:?[A-Za-z0-9_%]*@";
+
+    /**
+     * Merge a list of {@link PartialFunction}s and return the first value where the function is
+     * defined or empty list if no function matches the input.
+     *
+     * @param fns
+     * @param arg
+     * @param <T>
+     * @param <R>
+     * @return
+     */
+    public static <T, R> Collection<R> applyAll(
+        List<? extends PartialFunction<T, ? extends Collection<R>>> fns, T arg) {
+        PartialFunction<T, Collection<R>> fn = merge(fns);
+        if (fn.isDefinedAt(arg)) {
+            return fn.apply(arg);
+        }
+        return Collections.emptyList();
+    }
+
+    /**
+     * Given a list of {@link PartialFunction}s merge to produce a single function that will test the
+     * input against each function one by one until a match is found or {@link
+     * PartialFunction$#empty()} is returned.
+     *
+     * @param fns
+     * @param <T>
+     * @param <D>
+     * @return
+     */
+    public static <T, D> PartialFunction<T, Collection<D>> merge(
+        Collection<? extends PartialFunction<T, ? extends Collection<D>>> fns) {
+        return new AbstractPartialFunction<T, Collection<D>>() {
+            @Override
+            public boolean isDefinedAt(T x) {
+                return fns.stream()
+                    .filter(pfn -> PlanUtils.safeIsDefinedAt(pfn, x))
+                    .findFirst()
+                    .isPresent();
+            }
+
+            private boolean isDefinedAt(T x, PartialFunction<T, ? extends Collection<D>> pfn) {
+                return PlanUtils.safeIsDefinedAt(pfn, x);
+            }
+
+            @Override
+            public Collection<D> apply(T x) {
+                return fns.stream()
+                    .filter(pfn -> PlanUtils.safeIsDefinedAt(pfn, x))
+                    .map(
+                        pfn -> {
+                            try {
+                                Collection<D> collection = pfn.apply(x);
+                                log.info(
+                                    "Visitor {} visited {}, returned {}",
+                                    pfn.getClass().getCanonicalName(),
+                                    x.getClass().getCanonicalName(),
+                                    collection);
+                                return collection;
+                            } catch (RuntimeException | NoClassDefFoundError | NoSuchMethodError e) {
+                                log.error("Apply failed:", e);
+                                return null;
+                            }
+                        })
+                    .filter(Objects::nonNull)
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toList());
+            }
+        };
+    }
+
+    public static StructType toStructType(List<Attribute> attributes) {
+        return new StructType(
+            attributes.stream()
+                .map(
+                    attr ->
+                        new StructField(attr.name(), attr.dataType(), attr.nullable(), attr.metadata()))
+                .collect(Collectors.toList())
+                .toArray(new StructField[0]));
+    }
+
+    public static String namespaceUri(URI outputPath) {
+        return Optional.ofNullable(outputPath.getAuthority())
+            .map(a -> String.format("%s://%s", outputPath.getScheme(), a))
+            .orElse(outputPath.getScheme());
+    }
+
+    public static Path getDirectoryPath(Path p, Configuration hadoopConf) {
+        try {
+            if (p.getFileSystem(hadoopConf).getFileStatus(p).isFile()) {
+                return p.getParent();
+            } else {
+                return p;
+            }
+        } catch (IOException e) {
+            log.warn("Unable to get file system for path ", e);
+            return p;
+        }
+    }
+
+    /**
+     * Given a list of RDDs, it collects list of data location directories. For each RDD, a parent
+     * directory is taken and list of distinct locations is returned.
+     *
+     * @param fileRdds
+     * @return
+     */
+    public static List<Path> findRDDPaths(List<RDD<?>> fileRdds) {
+        return fileRdds.stream()
+            .flatMap(
+                rdd -> {
+                    if (rdd instanceof HadoopRDD) {
+                        HadoopRDD hadoopRDD = (HadoopRDD) rdd;
+                        Path[] inputPaths = FileInputFormat.getInputPaths(hadoopRDD.getJobConf());
+                        Configuration hadoopConf = hadoopRDD.getConf();
+                        return Arrays.stream(inputPaths)
+                            .map(p -> PlanUtils.getDirectoryPath(p, hadoopConf));
+                    } else if (rdd instanceof FileScanRDD) {
+                        FileScanRDD fileScanRDD = (FileScanRDD) rdd;
+                        return ScalaConversionUtils.fromSeq(fileScanRDD.filePartitions()).stream()
+                            .flatMap(fp -> Arrays.stream(fp.files()))
+                            .map(f -> new Path(f.filePath()).getParent());
+                    } else {
+                        log.warn("Unknown RDD class {}", rdd.getClass().getCanonicalName());
+                        return Stream.empty();
+                    }
+                })
+            .distinct()
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * instanceOf alike implementation which does not fail in case of a missing class.
+     *
+     * @param instance
+     * @param classCanonicalName
+     * @return
+     */
+    public static boolean safeIsInstanceOf(Object instance, String classCanonicalName) {
+        try {
+            Class c = Class.forName(classCanonicalName);
+            return instance.getClass().isAssignableFrom(c);
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    /**
+     * isDefinedAt method implementation that should never throw an error or exception
+     *
+     * @param pfn
+     * @param x
+     * @return
+     */
+    public static boolean safeIsDefinedAt(PartialFunction pfn, Object x) {
+        try {
+            return pfn.isDefinedAt(x);
+        } catch (ClassCastException e) {
+            // do nothing
+            return false;
+        } catch (Exception e) {
+            log.info("isDefinedAt method failed on {}", e);
+            return false;
+        } catch (NoClassDefFoundError e) {
+            log.info("isDefinedAt method failed on {}", pfn.getClass().getCanonicalName());
+            return false;
+        }
+    }
+
+    /**
+     * apply method implementation that should never throw an error or exception
+     *
+     * @param pfn
+     * @param x
+     * @param <T, D>
+     * @return
+     */
+    public static <T, D> List<T> safeApply(PartialFunction<D, List<T>> pfn, D x) {
+        try {
+            return pfn.apply(x);
+        } catch (Exception | NoClassDefFoundError | NoSuchMethodError e) {
+            log.info("apply method failed with", e);
+            return Collections.emptyList();
+        }
+    }
+}

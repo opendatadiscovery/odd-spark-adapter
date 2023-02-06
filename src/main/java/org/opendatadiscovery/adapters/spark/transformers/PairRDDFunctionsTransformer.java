@@ -7,7 +7,7 @@ import java.security.ProtectionDomain;
 import javassist.ClassPool;
 import javassist.CtClass;
 import lombok.extern.slf4j.Slf4j;
-import org.opendatadiscovery.adapters.spark.OddAdapterSparkListener;
+import org.opendatadiscovery.adapters.spark.ODDSparkListener;
 
 @Slf4j
 public class PairRDDFunctionsTransformer implements ClassFileTransformer {
@@ -15,7 +15,7 @@ public class PairRDDFunctionsTransformer implements ClassFileTransformer {
     private final String internalForm = CLASS_NAME.replaceAll("\\.", "/");
 
     public static final String CODE =
-            String.format("{ %s.registerOutput(this, conf); }", OddAdapterSparkListener.class.getName());
+            String.format("{ %s.registerOutput(this, conf); }", ODDSparkListener.class.getName());
 
     @Override
     public byte[] transform(

@@ -1,0 +1,24 @@
+version: "3.3"
+
+services:
+  spark:
+    image: jupyter/pyspark-notebook:spark-3.3.1
+    container_name: spark
+    ports:
+      # Jupyter Lab
+      - 8888:8888
+      # Spark UI
+      - 4040:4040
+      # Java debugger
+      - 5005:5005
+    volumes:
+      - ../build/libs:/odd-jar
+      - ./jobs:/jobs
+      - ./notebooks:/home/jovyan/notebooks
+    networks:
+      - spark
+
+networks:
+  spark:
+    external: true
+    name: spark

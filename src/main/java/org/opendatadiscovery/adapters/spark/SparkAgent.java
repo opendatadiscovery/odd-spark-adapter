@@ -8,7 +8,7 @@ public class SparkAgent {
     @SuppressWarnings("unused")
     public static void premain(final String agentArgs, final Instrumentation inst) {
         System.out.println("SparkAgent.premain: " + agentArgs + ", " + inst);
-        OddAdapterSparkListener.setProperties(agentArgs);
+        ODDSparkListener.setProperties(agentArgs);
         instrument(inst);
     }
 

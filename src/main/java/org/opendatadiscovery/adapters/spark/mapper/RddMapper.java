@@ -1,18 +1,5 @@
 package org.opendatadiscovery.adapters.spark.mapper;
 
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.URI;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +23,20 @@ import scala.collection.Iterator;
 import scala.collection.JavaConversions;
 import scala.collection.Seq;
 
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import static org.opendatadiscovery.adapters.spark.utils.Utils.CAMEL_TO_SNAKE_CASE;
 
 @Slf4j
@@ -44,24 +45,24 @@ public class RddMapper {
     public String name(final RDD<?> rdd) {
         String rddName = rdd.name();
         if (rddName == null
-                // HadoopRDDs are always named for the path. Don't name the RDD for a file. Otherwise, the
-                // job name will end up differing each time we read a path with a date or other variable
-                // directory name
-                || (rdd instanceof HadoopRDD
-                && Arrays.stream(FileInputFormat.getInputPaths(((HadoopRDD) rdd).getJobConf()))
-                .anyMatch(p -> p.toString().contains(rdd.name())))
-                // If the map RDD is named the same as its dependent, just use map_partition
-                // This happens, e.g., when calling sparkContext.textFile(), as it creates a HadoopRDD, maps
-                // the value to a string, and sets the name of the mapped RDD to the path, which is already
-                // the name of the underlying HadoopRDD
-                || (rdd instanceof MapPartitionsRDD
-                && rdd.name().equals(((MapPartitionsRDD) rdd).prev().name()))) {
+            // HadoopRDDs are always named for the path. Don't name the RDD for a file. Otherwise, the
+            // job name will end up differing each time we read a path with a date or other variable
+            // directory name
+            || (rdd instanceof HadoopRDD
+            && Arrays.stream(FileInputFormat.getInputPaths(((HadoopRDD) rdd).getJobConf()))
+            .anyMatch(p -> p.toString().contains(rdd.name())))
+            // If the map RDD is named the same as its dependent, just use map_partition
+            // This happens, e.g., when calling sparkContext.textFile(), as it creates a HadoopRDD, maps
+            // the value to a string, and sets the name of the mapped RDD to the path, which is already
+            // the name of the underlying HadoopRDD
+            || (rdd instanceof MapPartitionsRDD
+            && rdd.name().equals(((MapPartitionsRDD) rdd).prev().name()))) {
             rddName =
-                    rdd.getClass()
-                            .getSimpleName()
-                            .replaceAll("RDD\\d*$", "") // remove the trailing RDD from the class name
-                            .replaceAll(CAMEL_TO_SNAKE_CASE, "_$1") // camel case to snake case
-                            .toLowerCase(Locale.ROOT);
+                rdd.getClass()
+                    .getSimpleName()
+                    .replaceAll("RDD\\d*$", "") // remove the trailing RDD from the class name
+                    .replaceAll(CAMEL_TO_SNAKE_CASE, "_$1") // camel case to snake case
+                    .toLowerCase(Locale.ROOT);
         }
         final Seq<Dependency<?>> deps = rdd.dependencies();
         final List<Dependency<?>> dependencies = ScalaConversionUtils.fromSeq(deps);
@@ -69,8 +70,8 @@ public class RddMapper {
             return rddName;
         }
         final List<String> dependencyNames = dependencies.stream()
-                .map(d -> name(d.rdd()))
-                .collect(Collectors.toList());
+            .map(d -> name(d.rdd()))
+            .collect(Collectors.toList());
         final String dependencyName = Strings.join(dependencyNames, "_");
         if (!dependencyName.startsWith(rddName)) {
             return rddName + "_" + dependencyName;
@@ -81,11 +82,11 @@ public class RddMapper {
     public List<URI> inputs(final RDD<?> finalRdd) {
         final Set<RDD<?>> rdds = flatten(finalRdd);
         return rdds.stream()
-                .map(this::getInputPaths)
-                .filter(Objects::nonNull)
-                .flatMap(List::stream)
-                .map(Path::toUri)
-                .collect(Collectors.toList());
+            .map(this::getInputPaths)
+            .filter(Objects::nonNull)
+            .flatMap(List::stream)
+            .map(Path::toUri)
+            .collect(Collectors.toList());
     }
 
     public List<URI> outputs(final ActiveJob job, final Configuration config) {
@@ -96,14 +97,12 @@ public class RddMapper {
                 final Field f = getConfigField(fn);
                 f.setAccessible(true);
 
-                final HadoopMapRedWriteConfigUtil configUtil =
-                        Optional.of(f.get(fn))
-                                .filter(HadoopMapRedWriteConfigUtil.class::isInstance)
-                                .map(HadoopMapRedWriteConfigUtil.class::cast)
-                                .orElseThrow(
-                                        () ->
-                                                new NoSuchFieldException(
-                                                        "Field is not instance of HadoopMapRedWriteConfigUtil"));
+                // TODO: rdd.take() breaks this in the orElseThrow()
+                final HadoopMapRedWriteConfigUtil configUtil = Optional.of(f.get(fn))
+                    .filter(HadoopMapRedWriteConfigUtil.class::isInstance)
+                    .map(HadoopMapRedWriteConfigUtil.class::cast)
+                    .orElseThrow(() -> new NoSuchFieldException(
+                        "Field is not instance of HadoopMapRedWriteConfigUtil"));
 
                 final Field confField = HadoopMapRedWriteConfigUtil.class.getDeclaredField("conf");
                 confField.setAccessible(true);
@@ -147,7 +146,7 @@ public class RddMapper {
     }
 
     private Field getConfigField(final Function2<TaskContext, scala.collection.Iterator<?>, ?> fn)
-            throws NoSuchFieldException {
+        throws NoSuchFieldException {
         try {
             return fn.getClass().getDeclaredField("config$1");
         } catch (NoSuchFieldException e) {
@@ -168,13 +167,13 @@ public class RddMapper {
     private List<Path> getInputPaths(final RDD<?> rdd) {
         if (rdd instanceof HadoopRDD) {
             return Arrays.asList(
-                    org.apache.hadoop.mapred.FileInputFormat.getInputPaths(
-                            ((HadoopRDD<?, ?>) rdd).getJobConf()));
+                org.apache.hadoop.mapred.FileInputFormat.getInputPaths(
+                    ((HadoopRDD<?, ?>) rdd).getJobConf()));
         } else if (rdd instanceof NewHadoopRDD) {
             try {
                 return Arrays.asList(
-                        org.apache.hadoop.mapreduce.lib.input.FileInputFormat.getInputPaths(
-                                new Job(((NewHadoopRDD<?, ?>) rdd).getConf())));
+                    org.apache.hadoop.mapreduce.lib.input.FileInputFormat.getInputPaths(
+                        new Job(((NewHadoopRDD<?, ?>) rdd).getConf())));
             } catch (IOException e) {
                 log.error("ODD spark agent could not get input paths", e);
             }

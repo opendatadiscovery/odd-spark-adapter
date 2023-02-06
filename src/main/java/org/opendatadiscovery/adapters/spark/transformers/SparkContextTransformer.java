@@ -8,7 +8,7 @@ import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.opendatadiscovery.adapters.spark.OddAdapterSparkListener;
+import org.opendatadiscovery.adapters.spark.ODDSparkListener;
 
 @Slf4j
 public class SparkContextTransformer implements ClassFileTransformer {
@@ -16,7 +16,7 @@ public class SparkContextTransformer implements ClassFileTransformer {
     private final String internalForm = className.replaceAll("\\.", "/");
 
     public static final String CODE =
-            String.format("{ %s.instrument(this); }", OddAdapterSparkListener.class.getName());
+            String.format("{ %s.instrument(this); }", ODDSparkListener.class.getName());
 
     @Override
     public byte[] transform(
