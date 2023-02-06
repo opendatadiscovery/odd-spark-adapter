@@ -19,7 +19,7 @@ df_mysql = spark.read.jdbc(url=source_url, table=query, properties=source_proper
 sfReadOptions = {
     "sfURL": "mwlgidp-znb56211.snowflakecomputing.com",
     "sfUser": "ndementev",
-    "sfPassword": "rTv83600xc!6052",
+    "sfPassword": "",
     "sfDatabase": "SNOWFLAKE_SAMPLE_DATA",
     "sfSchema": "TPCDS_SF100TCL",
     "sfWarehouse": "COMPUTE_WH"
@@ -28,7 +28,7 @@ sfReadOptions = {
 sfWriteOptions = {
     "sfURL": "mwlgidp-znb56211.snowflakecomputing.com",
     "sfUser": "ndementev",
-    "sfPassword": "rTv83600xc!6052",
+    "sfPassword": "",
     "sfDatabase": "TEST_DATABASE",
     "sfSchema": "TEST_SCHEMA",
     "sfWarehouse": "COMPUTE_WH"
