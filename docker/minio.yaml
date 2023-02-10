@@ -28,6 +28,7 @@ services:
       /usr/bin/mc cp /dumps/words.txt myminio/wordcount;
       /usr/bin/mc mb myminio/trafficspeed;
       /usr/bin/mc cp /dumps/traffic-speed.csv myminio/trafficspeed;
+      /usr/bin/mc mb myminio/deltabucket;
       "
       exit 0;
     networks:

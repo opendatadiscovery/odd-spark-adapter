@@ -17,12 +17,12 @@ import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
 import org.opendatadiscovery.adapters.spark.mapper.DataEntityMapper;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
 import org.opendatadiscovery.client.model.DataEntity;
-import scala.collection.JavaConversions;
 import scala.collection.JavaConverters;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -75,14 +75,6 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation> {
             .collect(Collectors.toList());
 
         return LogicalPlanDependencies.inputs(inputs);
-//            .map(path -> {
-//                    final String namespace = Utils.namespaceUri(path.toUri());
-//                    final String file = Arrays.stream(relation.location().inputFiles())
-//                        .filter(f -> f.contains(namespace))
-//                        .collect(Collectors.joining());
-//                    return DataEntityMapper.map(namespace, file);
-//            })
-//            .collect(Collectors.toList());
     }
 
     private LogicalPlanDependencies handleJdbcRelation(final JDBCRelation relation) {
@@ -92,8 +84,7 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation> {
 
         final List<String> inputs;
         if (tables.isEmpty()) {
-            inputs = Collections.singletonList(DataEntityMapper.map(null, url, tableOrQuery))
-                .stream()
+            inputs = Stream.of(DataEntityMapper.map(null, url, tableOrQuery))
                 .map(DataEntity::getOddrn)
                 .collect(Collectors.toList());
         } else {

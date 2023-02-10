@@ -1,5 +1,6 @@
 package org.opendatadiscovery.adapters.spark.plan;
 
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import net.snowflake.spark.snowflake.DefaultSource;
@@ -7,28 +8,31 @@ import org.apache.spark.SparkContext;
 import org.apache.spark.SparkContext$;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
+import org.apache.spark.sql.kafka010.KafkaSourceProvider;
 import org.opendatadiscovery.adapters.spark.VisitorFactoryImpl;
 import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
 import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
 import org.opendatadiscovery.oddrn.Generator;
+import org.opendatadiscovery.oddrn.model.KafkaPath;
 import org.opendatadiscovery.oddrn.model.SnowflakePath;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import scala.runtime.AbstractPartialFunction;
 
+import java.net.URI;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
-// TODO: InsertIntoDataSourceCommand
-// TODO: what if I write a query to run inside of snowflake? This won't be a SaveIntoDataSourceCommand
+@RequiredArgsConstructor
 public class SaveIntoDataSourceCommandVisitor extends QueryPlanVisitor<SaveIntoDataSourceCommand> {
-    public static final String URL = "url";
-    public static final String DBTABLE = "dbtable";
+    private static final String URL = "url";
+    private static final String DBTABLE = "dbtable";
+
+    private final SparkContext sparkContext;
 
     @Override
     public LogicalPlanDependencies apply(final LogicalPlan logicalPlan) {
@@ -53,24 +57,48 @@ public class SaveIntoDataSourceCommandVisitor extends QueryPlanVisitor<SaveIntoD
 
     @SneakyThrows
     private LogicalPlanDependencies extractOutput(final SaveIntoDataSourceCommand command) {
+        if (command.dataSource().getClass().getName().contains("DeltaDataSource")) {
+            if (command.options().contains("path")) {
+                final String path = command.options().get("path").get();
+                try {
+                    return LogicalPlanDependencies.output(Utils.s3Generator(URI.create(path).getScheme(), path));
+                } catch (final Exception e) {
+                    log.error("Couldn't handle output for Delta Source: {}", command);
+                    return LogicalPlanDependencies.empty();
+                }
+            }
+        }
+
+        if (KafkaRelationVisitor.hasKafkaClasses() && command.dataSource() instanceof KafkaSourceProvider) {
+            final Map<String, String> options = JavaConverters.mapAsJavaMap(command.options());
+            final String cluster = options.get("kafka.bootstrap.servers");
+            final String topicName = options.getOrDefault("topic", "UNKNOWN");
+
+            final KafkaPath kafkaPath = KafkaPath.builder()
+                .cluster(cluster)
+                .topic(topicName)
+                .build();
+
+            return LogicalPlanDependencies.output(Generator.getInstance().generate(kafkaPath));
+        }
+
         if (SnowflakeRelationVisitor.hasSnowflakeClasses() && command.dataSource() instanceof DefaultSource) {
             final Map<String, String> options = JavaConverters.mapAsJavaMap(command.options());
 
             final SnowflakePath snowflakePath = SnowflakePath.builder()
+                .account("account")
                 .database(options.get("sfdatabase"))
                 .schema(options.get("sfschema"))
                 .table(options.getOrDefault("dbtable", "UNKNOWN"))
-                .warehouse("UNKNOWN")
                 .build();
 
-            return LogicalPlanDependencies
-                .outputs(Collections.singletonList(new Generator().generate(snowflakePath, "table")));
+            return LogicalPlanDependencies.output(Generator.getInstance().generate(snowflakePath));
         }
 
         final String url = command.options().get(URL).get();
         final String tableName = command.options().get(DBTABLE).get();
 
-        return LogicalPlanDependencies.outputs(Collections.singletonList(Utils.sqlGenerator(url, tableName)));
+        return LogicalPlanDependencies.output(Utils.sqlGenerator(url, tableName));
     }
 
     private LogicalPlanDependencies extractDependencies(

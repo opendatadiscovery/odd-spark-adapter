@@ -34,6 +34,10 @@ public class LogicalPlanDependencies {
         return new LogicalPlanDependencies(Collections.emptyList(), outputs);
     }
 
+    public static LogicalPlanDependencies output(final String output) {
+        return new LogicalPlanDependencies(Collections.emptyList(), Collections.singletonList(output));
+    }
+
     public static LogicalPlanDependencies empty() {
         return new LogicalPlanDependencies(Collections.emptyList(), Collections.emptyList());
     }

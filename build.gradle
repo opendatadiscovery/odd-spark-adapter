@@ -33,17 +33,15 @@ configurations.all {
 }
 
 dependencies {
-    // TODO: Can I remove that?
     implementation ("org.springframework.boot:spring-boot-starter-webflux:2.5.0")
-//    implementation "com.google.cloud.spark:spark-bigquery_2.12:0.21.1"
-//    implementation "com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.21.1"
 
     compileOnly "org.apache.spark:spark-core_2.12:${sparkVersion}"
     compileOnly "org.apache.spark:spark-sql_2.12:${sparkVersion}"
     compileOnly "org.apache.spark:spark-hive_2.12:${sparkVersion}"
     compileOnly "net.snowflake:spark-snowflake_2.12:2.11.0-spark_3.3"
+    compileOnly "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.1"
 
-    extraLibs "org.opendatadiscovery:oddrn-generator-java:0.1.11"
+    extraLibs "org.opendatadiscovery:oddrn-generator-java:0.1.15"
     extraLibs group: 'org.opendatadiscovery', name: 'ingestion-contract-client', version: '0.1.19'
     extraLibs group: 'com.github.jsqlparser', name: 'jsqlparser', version: '4.2'
 
