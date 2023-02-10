@@ -97,7 +97,6 @@ public class RddMapper {
                 final Field f = getConfigField(fn);
                 f.setAccessible(true);
 
-                // TODO: rdd.take() breaks this in the orElseThrow()
                 final HadoopMapRedWriteConfigUtil configUtil = Optional.of(f.get(fn))
                     .filter(HadoopMapRedWriteConfigUtil.class::isInstance)
                     .map(HadoopMapRedWriteConfigUtil.class::cast)

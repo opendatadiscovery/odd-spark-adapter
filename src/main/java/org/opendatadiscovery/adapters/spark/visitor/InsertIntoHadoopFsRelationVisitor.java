@@ -1,4 +1,4 @@
-package org.opendatadiscovery.adapters.spark.plan;
+package org.opendatadiscovery.adapters.spark.visitor;
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.InsertIntoHadoopFsRelationCommand;

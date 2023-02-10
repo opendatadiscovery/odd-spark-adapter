@@ -18,32 +18,27 @@ configurations {
     extraLibs
 }
 
-ext {
-    sparkVersion = '3.3.1'
-}
-
 configurations.all {
     exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
 
     resolutionStrategy {
-        // https://github.com/FasterXML/jackson-databind/issues/3627
-        // https://github.com/apache/spark/pull/38355 -> can be removed for Spark 3.3.2
         force "com.fasterxml.jackson:jackson-bom:2.13.4"
     }
 }
 
 dependencies {
-    implementation ("org.springframework.boot:spring-boot-starter-webflux:2.5.0")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:2.5.0")
 
-    compileOnly "org.apache.spark:spark-core_2.12:${sparkVersion}"
-    compileOnly "org.apache.spark:spark-sql_2.12:${sparkVersion}"
-    compileOnly "org.apache.spark:spark-hive_2.12:${sparkVersion}"
+    compileOnly "org.apache.spark:spark-core_2.12:3.3.1"
+    compileOnly "org.apache.spark:spark-sql_2.12:3.3.1"
+    compileOnly "org.apache.spark:spark-hive_2.12:3.3.1"
     compileOnly "net.snowflake:spark-snowflake_2.12:2.11.0-spark_3.3"
     compileOnly "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.1"
 
     extraLibs "org.opendatadiscovery:oddrn-generator-java:0.1.15"
-    extraLibs group: 'org.opendatadiscovery', name: 'ingestion-contract-client', version: '0.1.19'
-    extraLibs group: 'com.github.jsqlparser', name: 'jsqlparser', version: '4.2'
+    extraLibs "org.opendatadiscovery:ingestion-contract-client:0.1.19"
+    extraLibs "com.github.jsqlparser:jsqlparser:4.2"
+    extraLibs 'commons-validator:commons-validator:1.7'
 
     compileOnly "org.projectlombok:lombok:1.18.24"
     annotationProcessor "org.projectlombok:lombok:1.18.24"
@@ -60,11 +55,6 @@ jar {
     from {
         configurations.extraLibs.collect { it.isDirectory() ? it : zipTree(it) }
     }
-    manifest {
-        attributes(
-                "Premain-Class": 'org.opendatadiscovery.adapters.spark.SparkAgent',
-                "Agent-Class": 'org.opendatadiscovery.adapters.spark.SparkAgent'
-        )
-    }
+
     zip64 true
 }

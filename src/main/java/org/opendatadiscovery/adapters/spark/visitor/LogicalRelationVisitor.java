@@ -1,4 +1,4 @@
-package org.opendatadiscovery.adapters.spark.plan;
+package org.opendatadiscovery.adapters.spark.visitor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

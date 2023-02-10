@@ -1,0 +1,31 @@
+version: '3.3'
+
+services:
+  database:
+    image: postgres:13.2-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=odd-platform
+      - POSTGRES_PASSWORD=odd-platform-password
+      - POSTGRES_DB=odd-platform
+    ports:
+      - 5432:5432
+
+  odd-platform:
+    image: ghcr.io/opendatadiscovery/odd-platform:latest
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://database:5432/odd-platform
+      - SPRING_DATASOURCE_USERNAME=odd-platform
+      - SPRING_DATASOURCE_PASSWORD=odd-platform-password
+    networks:
+      - spark
+    depends_on:
+      - database
+    ports:
+      - 8080:8080
+
+networks:
+  spark:
+    external: true
+    name: spark

@@ -7,7 +7,6 @@ import org.opendatadiscovery.client.model.DataEntityType;
 import org.opendatadiscovery.client.model.DataTransformer;
 import org.opendatadiscovery.client.model.DataTransformerRun;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -17,7 +16,6 @@ import static org.opendatadiscovery.adapters.spark.utils.Utils.S3;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.S3A;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.S3N;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
-import static org.opendatadiscovery.adapters.spark.utils.Utils.namespaceUri;
 import static org.opendatadiscovery.adapters.spark.utils.Utils.s3Generator;
 
 public class DataEntityMapper {
@@ -64,26 +62,12 @@ public class DataEntityMapper {
             .oddrn(Utils.sqlGenerator(url, tableName));
     }
 
-    public static DataEntity map(final String namespace, final String file) {
+    public static String map(final String namespace, final String file) {
         if (namespace.contains(S3A) || namespace.contains(S3N) || namespace.contains(S3)) {
-            return new DataEntity()
-                .type(DataEntityType.FILE)
-                .oddrn(s3Generator(namespace, file));
+            return s3Generator(namespace, file);
         }
-        return new DataEntity()
-            .type(DataEntityType.FILE)
-            .oddrn(fileGenerator(namespace, file));
-    }
 
-    public static DataEntity map(final URI uri) {
-        if (uri == null) {
-            return null;
-        }
-        return DataEntityMapper.map(namespaceUri(uri), uri.getPath());
-    }
-
-    public static List<DataEntity> map(final List<URI> uris) {
-        return uris.stream().map(DataEntityMapper::map).filter(Objects::nonNull).collect(Collectors.toList());
+        return fileGenerator(namespace, file);
     }
 
     private static Optional<String> findSql(final List<DataEntity> inputs) {

@@ -1,15 +1,14 @@
-package org.opendatadiscovery.adapters.spark.plan;
+package org.opendatadiscovery.adapters.spark.visitor;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import net.snowflake.spark.snowflake.DefaultSource;
 import org.apache.spark.SparkContext;
-import org.apache.spark.SparkContext$;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
 import org.apache.spark.sql.kafka010.KafkaSourceProvider;
-import org.opendatadiscovery.adapters.spark.VisitorFactoryImpl;
+import org.opendatadiscovery.adapters.spark.VisitorFactoryProvider;
 import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
 import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
@@ -36,17 +35,16 @@ public class SaveIntoDataSourceCommandVisitor extends QueryPlanVisitor<SaveIntoD
 
     @Override
     public LogicalPlanDependencies apply(final LogicalPlan logicalPlan) {
-        final SparkContext sparkContext = SparkContext$.MODULE$.getActive().get();
-
-        final List<QueryPlanVisitor<? extends LogicalPlan>> inputVisitors
-            = new VisitorFactoryImpl().getVisitors(sparkContext);
+        final List<QueryPlanVisitor<? extends LogicalPlan>> visitors = VisitorFactoryProvider
+            .create(sparkContext)
+            .getVisitors();
 
         try {
             final SaveIntoDataSourceCommand command = (SaveIntoDataSourceCommand) logicalPlan;
 
             return LogicalPlanDependencies.merge(Arrays.asList(
                 extractOutput(command),
-                extractDependencies(command, inputVisitors)
+                extractDependencies(command, visitors)
             ));
         } catch (final Exception e) {
             log.error("Couldn't handle the logical plan: {}, reason: {}", logicalPlan.getClass(), e.getMessage());
