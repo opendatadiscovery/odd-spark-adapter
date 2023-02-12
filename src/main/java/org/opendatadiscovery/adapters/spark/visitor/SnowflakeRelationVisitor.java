@@ -10,11 +10,12 @@ import net.snowflake.spark.snowflake.SnowflakeRelation;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
+import org.opendatadiscovery.adapters.spark.utils.OddrnUtils;
 import org.opendatadiscovery.oddrn.model.OddrnPath;
 import org.opendatadiscovery.oddrn.model.SnowflakePath;
+import scala.collection.JavaConverters;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class SnowflakeRelationVisitor extends QueryPlanVisitor<LogicalRelation> {
@@ -39,21 +40,12 @@ public class SnowflakeRelationVisitor extends QueryPlanVisitor<LogicalRelation> 
         final Parameters.MergedParameters snowflakeParams = relation.params();
         final Statement statement = CCJSqlParserUtil.parse(snowflakeParams.query().get());
 
-        final List<OddrnPath> inputs = new TablesNamesFinder().getTableList(statement)
-            .stream()
-            .map(tableName -> SnowflakePath.builder()
-                .database(snowflakeParams.sfDatabase())
-                .schema(snowflakeParams.sfSchema())
-                .table(tableName)
-                .build())
-            .collect(Collectors.toList());
+        final List<? extends OddrnPath> snowflakePaths = OddrnUtils.resolveSnowflakePath(
+            new TablesNamesFinder().getTableList(statement),
+            JavaConverters.mapAsJavaMap(relation.params().parameters())
+        );
 
-        try {
-            return LogicalPlanDependencies.inputs(inputs);
-        } catch (final Exception e) {
-            log.error("Couldn't get oddrn for SnowflakeRelation: {}", e.getMessage());
-            return LogicalPlanDependencies.empty();
-        }
+        return LogicalPlanDependencies.inputs(snowflakePaths);
     }
 
     public static boolean hasSnowflakeClasses() {

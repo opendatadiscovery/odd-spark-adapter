@@ -13,8 +13,6 @@ repositories {
 
 configurations {
     // configuration that holds jars to include in the jar
-    // TODO: why do we need that?
-    // TODO: won't 'implementation' be enough?
     extraLibs
 }
 

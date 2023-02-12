@@ -7,16 +7,36 @@ import org.apache.spark.SparkConf;
 import org.opendatadiscovery.oddrn.model.AwsS3Path;
 import org.opendatadiscovery.oddrn.model.CustomS3Path;
 import org.opendatadiscovery.oddrn.model.OddrnPath;
+import org.opendatadiscovery.oddrn.model.SnowflakePath;
 import scala.Option;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils.asJavaOptional;
 
 @UtilityClass
 @Slf4j
 public class OddrnUtils {
+    public static List<SnowflakePath> resolveSnowflakePath(final List<String> tableNames,
+                                                           final Map<String, String> options) {
+        final String account = options.get("sfurl").split("\\.")[0];
+        final String database = options.get("sfdatabase");
+        final String schema = options.get("sfschema");
+
+        return tableNames.stream()
+            .map(tableName -> SnowflakePath.builder()
+                .account(account)
+                .database(database)
+                .schema(schema)
+                .table(tableName)
+                .build())
+            .collect(Collectors.toList());
+    }
+
     public static Optional<OddrnPath> resolveS3Oddrn(final SparkConf sparkConf, final String path) {
         final Option<String> endpoint;
 

@@ -13,7 +13,6 @@ import org.opendatadiscovery.adapters.spark.utils.OddrnUtils;
 import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
 import org.opendatadiscovery.oddrn.model.KafkaPath;
-import org.opendatadiscovery.oddrn.model.SnowflakePath;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import scala.runtime.AbstractPartialFunction;
@@ -22,6 +21,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static java.util.Collections.singletonList;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -80,14 +81,9 @@ public class SaveIntoDataSourceCommandVisitor extends QueryPlanVisitor<SaveIntoD
         if (SnowflakeRelationVisitor.hasSnowflakeClasses() && command.dataSource() instanceof DefaultSource) {
             final Map<String, String> options = JavaConverters.mapAsJavaMap(command.options());
 
-            return LogicalPlanDependencies.output(
-                SnowflakePath.builder()
-                    .account("account")
-                    .database(options.get("sfdatabase"))
-                    .schema(options.get("sfschema"))
-                    .table(options.getOrDefault("dbtable", "UNKNOWN"))
-                    .build()
-            );
+            final List<String> tableName = singletonList(options.getOrDefault("dbtable", "UNKNOWN"));
+
+            return LogicalPlanDependencies.outputs(OddrnUtils.resolveSnowflakePath(tableName, options));
         }
 
         final String url = command.options().get("url").get();
