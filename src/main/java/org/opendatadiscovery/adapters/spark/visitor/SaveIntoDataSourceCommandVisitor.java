@@ -26,9 +26,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class SaveIntoDataSourceCommandVisitor extends QueryPlanVisitor<SaveIntoDataSourceCommand> {
-    private static final String URL = "url";
-    private static final String DBTABLE = "dbtable";
-
     private final SparkContext sparkContext;
 
     @Override
@@ -61,7 +58,7 @@ public class SaveIntoDataSourceCommandVisitor extends QueryPlanVisitor<SaveIntoD
     private LogicalPlanDependencies extractOutputPayload(final SaveIntoDataSourceCommand command) {
         if (command.dataSource().getClass().getName().contains("DeltaDataSource")) {
             if (command.options().contains("path")) {
-                OddrnUtils.resolveS3Oddrn(sparkContext.conf(), command.options().get("path").get())
+                return OddrnUtils.resolveS3Oddrn(sparkContext.conf(), command.options().get("path").get())
                     .map(LogicalPlanDependencies::output)
                     .orElseGet(LogicalPlanDependencies::empty);
             }
@@ -93,8 +90,8 @@ public class SaveIntoDataSourceCommandVisitor extends QueryPlanVisitor<SaveIntoD
             );
         }
 
-        final String url = command.options().get(URL).get();
-        final String tableName = command.options().get(DBTABLE).get();
+        final String url = command.options().get("url").get();
+        final String tableName = command.options().get("dbtable").get();
 
         return LogicalPlanDependencies.output(Utils.sqlOddrnPath(url, tableName));
     }

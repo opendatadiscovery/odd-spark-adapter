@@ -21,6 +21,7 @@ public class LoggingExecutionContext extends AbstractExecutionContext {
         if (getErrorMessage() != null) {
             log.info("Error message: {}", getErrorMessage());
         }
+        log.info("Properties are: {}", getProperties());
         log.info("Final dependencies are {}", dependencies);
     }
 }

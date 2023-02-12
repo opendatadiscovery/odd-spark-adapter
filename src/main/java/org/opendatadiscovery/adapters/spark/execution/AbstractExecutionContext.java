@@ -21,8 +21,11 @@ import org.opendatadiscovery.adapters.spark.mapper.RddMapper;
 import scala.Option;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -42,6 +45,9 @@ public abstract class AbstractExecutionContext implements ExecutionContext {
 
     @Getter(value = AccessLevel.PROTECTED)
     private String errorMessage;
+
+    @Getter(value = AccessLevel.PROTECTED)
+    private Map<Object, Object> properties = new HashMap<>();
 
     protected final Set<LogicalPlanDependencies> dependencies = Collections.synchronizedSet(new HashSet<>());
     protected final RddMapper rddMapper = new RddMapper();
@@ -65,12 +71,16 @@ public abstract class AbstractExecutionContext implements ExecutionContext {
     }
 
     @Override
-    public void reportSparkSQLJob(final long executionId) {
+    public void reportSparkSQLJob(final long executionId, final Properties properties) {
         final Option<SparkContext> sparkContext = SparkContext$.MODULE$.getActive();
 
         if (sparkContext.isEmpty()) {
             log.error("There's no active spark context. Skipping job with id: {}", executionId);
             return;
+        }
+
+        if (properties != null) {
+            this.properties.putAll(properties);
         }
 
         final QueryExecution queryExecution = SQLExecution.getQueryExecution(executionId);

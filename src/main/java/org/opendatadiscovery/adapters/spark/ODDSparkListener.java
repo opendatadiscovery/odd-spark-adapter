@@ -25,6 +25,7 @@ public class ODDSparkListener extends SparkListener {
             appStartEvent.appId().get(),
             appStartEvent.appName()
         );
+
         this.executionContext = ExecutionContextFactory.create(appStartEvent.appName());
     }
 
@@ -37,7 +38,7 @@ public class ODDSparkListener extends SparkListener {
             .map(Long::parseLong);
 
         if (executionId.isPresent()) {
-            executionContext.reportSparkSQLJob(executionId.get());
+            executionContext.reportSparkSQLJob(executionId.get(), jobStartEvent.properties());
         } else {
             SparkUtils.getActiveJob(jobStartEvent.jobId()).ifPresent(executionContext::reportSparkRddJob);
         }
@@ -46,7 +47,7 @@ public class ODDSparkListener extends SparkListener {
     @Override
     public void onOtherEvent(final SparkListenerEvent event) {
         if (event instanceof SparkListenerSQLExecutionStart) {
-            executionContext.reportSparkSQLJob(((SparkListenerSQLExecutionStart) event).executionId());
+            executionContext.reportSparkSQLJob(((SparkListenerSQLExecutionStart) event).executionId(), null);
         }
     }
 
