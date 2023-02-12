@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'org.opendatadiscovery'
-version = "${version != 'unspecified' ? version : file('VERSION').text}"
+version = "0.0.1"
 sourceCompatibility = '8'
 
 repositories {

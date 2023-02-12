@@ -1,11 +1,16 @@
 package org.opendatadiscovery.adapters.spark.execution;
 
+import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.SparkContext;
 import org.apache.spark.SparkContext$;
 import org.apache.spark.rdd.RDD;
 import org.apache.spark.scheduler.ActiveJob;
+import org.apache.spark.scheduler.JobFailed;
+import org.apache.spark.scheduler.JobResult;
+import org.apache.spark.scheduler.SparkListenerJobEnd;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.QueryExecution;
 import org.apache.spark.sql.execution.SQLExecution;
@@ -23,13 +28,23 @@ import java.util.stream.Collectors;
 
 import static org.opendatadiscovery.adapters.spark.utils.Utils.namespaceUri;
 
-@RequiredArgsConstructor
 @Slf4j
-public class ExecutionContextImpl implements ExecutionContext {
-    private final String oddPlatformUrl;
+@RequiredArgsConstructor
+public abstract class AbstractExecutionContext implements ExecutionContext {
+    @Getter(value = AccessLevel.PROTECTED)
+    private final String applicationName;
 
-    private final Set<LogicalPlanDependencies> dependencies = Collections.synchronizedSet(new HashSet<>());
-    private final RddMapper rddMapper = new RddMapper();
+    @Getter(value = AccessLevel.PROTECTED)
+    private final String hostName;
+
+    @Getter(value = AccessLevel.PROTECTED)
+    private long jobEndTime = 0;
+
+    @Getter(value = AccessLevel.PROTECTED)
+    private String errorMessage;
+
+    protected final Set<LogicalPlanDependencies> dependencies = Collections.synchronizedSet(new HashSet<>());
+    protected final RddMapper rddMapper = new RddMapper();
 
     @Override
     public void reportSparkRddJob(final ActiveJob job) {
@@ -45,7 +60,8 @@ public class ExecutionContextImpl implements ExecutionContext {
             .map(input -> DataEntityMapper.map(namespaceUri(input), input.getPath()))
             .collect(Collectors.toList());
 
-        dependencies.add(new LogicalPlanDependencies(inputs, outputs));
+        // TODO: fix
+        dependencies.add(LogicalPlanDependencies.empty());
     }
 
     @Override
@@ -59,7 +75,7 @@ public class ExecutionContextImpl implements ExecutionContext {
 
         final QueryExecution queryExecution = SQLExecution.getQueryExecution(executionId);
         if (queryExecution == null) {
-            log.debug("Query execution is null. Skipping job with id: {}", executionId);
+            log.warn("Query execution is null. Skipping job with id: {}", executionId);
             return;
         }
 
@@ -74,7 +90,15 @@ public class ExecutionContextImpl implements ExecutionContext {
     }
 
     @Override
-    public void reportApplicationEnd() {
-        log.info("Final dependencies are {}", dependencies);
+    public void reportJobEnd(final SparkListenerJobEnd jobEnd) {
+        final JobResult jobResult = jobEnd.jobResult();
+
+        if (jobEndTime < jobEnd.time()) {
+            this.jobEndTime = jobEnd.time();
+        }
+
+        if (jobResult instanceof JobFailed) {
+            errorMessage = ((JobFailed) jobResult).exception().getMessage();
+        }
     }
 }

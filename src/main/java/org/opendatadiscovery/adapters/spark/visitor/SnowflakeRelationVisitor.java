@@ -10,7 +10,7 @@ import net.snowflake.spark.snowflake.SnowflakeRelation;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
-import org.opendatadiscovery.oddrn.Generator;
+import org.opendatadiscovery.oddrn.model.OddrnPath;
 import org.opendatadiscovery.oddrn.model.SnowflakePath;
 
 import java.util.List;
@@ -39,14 +39,13 @@ public class SnowflakeRelationVisitor extends QueryPlanVisitor<LogicalRelation> 
         final Parameters.MergedParameters snowflakeParams = relation.params();
         final Statement statement = CCJSqlParserUtil.parse(snowflakeParams.query().get());
 
-        final List<String> inputs = new TablesNamesFinder().getTableList(statement)
+        final List<OddrnPath> inputs = new TablesNamesFinder().getTableList(statement)
             .stream()
             .map(tableName -> SnowflakePath.builder()
                 .database(snowflakeParams.sfDatabase())
                 .schema(snowflakeParams.sfSchema())
                 .table(tableName)
                 .build())
-            .map(path -> Generator.getInstance().generate(path))
             .collect(Collectors.toList());
 
         try {

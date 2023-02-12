@@ -3,7 +3,6 @@ package org.opendatadiscovery.adapters.spark;
 import lombok.Getter;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
-import org.opendatadiscovery.adapters.spark.visitor.InsertIntoHadoopFsRelationVisitor;
 import org.opendatadiscovery.adapters.spark.visitor.KafkaRelationVisitor;
 import org.opendatadiscovery.adapters.spark.visitor.LogicalRelationVisitor;
 import org.opendatadiscovery.adapters.spark.visitor.QueryPlanVisitor;
@@ -21,7 +20,6 @@ public class VisitorFactoryImpl implements VisitorFactory {
     public VisitorFactoryImpl(final SparkContext sparkContext) {
         final List<QueryPlanVisitor<? extends LogicalPlan>> visitors = new ArrayList<>(Arrays.asList(
             new LogicalRelationVisitor(sparkContext),
-            new InsertIntoHadoopFsRelationVisitor(),
             new SaveIntoDataSourceCommandVisitor(sparkContext)
         ));
 

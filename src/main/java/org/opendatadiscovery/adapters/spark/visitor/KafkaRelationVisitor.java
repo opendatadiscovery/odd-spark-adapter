@@ -6,15 +6,14 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.apache.spark.sql.kafka010.KafkaRelation;
 import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
-import org.opendatadiscovery.oddrn.Generator;
 import org.opendatadiscovery.oddrn.model.KafkaPath;
+import org.opendatadiscovery.oddrn.model.OddrnPath;
 import scala.collection.JavaConverters;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -44,20 +43,12 @@ public class KafkaRelationVisitor extends QueryPlanVisitor<LogicalRelation> {
         final String cluster = options.get("kafka.bootstrap.servers");
         final String topicNames = options.get("subscribe");
 
-        final List<String> inputs = Arrays.stream(topicNames.split(","))
+        final List<OddrnPath> inputs = Arrays.stream(topicNames.split(","))
             .map(String::trim)
-            .map(topicName -> {
-                try {
-                    return Generator.getInstance().generate(KafkaPath.builder()
-                        .cluster(cluster)
-                        .topic(topicName)
-                        .build());
-                } catch (final Exception e) {
-                    log.error("Error", e);
-                    return null;
-                }
-            })
-            .filter(Objects::nonNull)
+            .map(topicName -> KafkaPath.builder()
+                .cluster(cluster)
+                .topic(topicName)
+                .build())
             .collect(Collectors.toList());
 
         return LogicalPlanDependencies.inputs(inputs);

@@ -20,15 +20,18 @@ public class ODDSparkListener extends SparkListener {
     private ExecutionContext executionContext;
 
     @Override
-    public void onApplicationStart(final SparkListenerApplicationStart event) {
-        log.debug("Creating Execution context for application: id: {}, name: {}", event.appId(), event.appName());
-        this.executionContext = ExecutionContextFactory.create();
-        log.debug("Execution context has been created for application: id: {}, name: {}",
-            event.appId(), event.appName());
+    public void onApplicationStart(final SparkListenerApplicationStart appStartEvent) {
+        log.info("Creating ExecutionContext for application: id: {}, name: {}",
+            appStartEvent.appId().get(),
+            appStartEvent.appName()
+        );
+        this.executionContext = ExecutionContextFactory.create(appStartEvent.appName());
     }
 
     @Override
     public void onJobStart(final SparkListenerJobStart jobStartEvent) {
+        log.info("Job has started: {}", jobStartEvent);
+
         final Optional<Long> executionId = Optional
             .ofNullable(jobStartEvent.properties().getProperty(SQLExecution.EXECUTION_ID_KEY()))
             .map(Long::parseLong);
@@ -48,8 +51,9 @@ public class ODDSparkListener extends SparkListener {
     }
 
     @Override
-    public void onJobEnd(final SparkListenerJobEnd jobEnd) {
-        log.info("onJobEnd#{}", jobEnd);
+    public void onJobEnd(final SparkListenerJobEnd jobEndEvent) {
+        log.info("Job {} has ended", jobEndEvent);
+        executionContext.reportJobEnd(jobEndEvent);
     }
 
     @Override

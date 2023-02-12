@@ -6,6 +6,7 @@ import org.opendatadiscovery.client.model.DataEntityList;
 import org.opendatadiscovery.client.model.DataEntityType;
 import org.opendatadiscovery.client.model.DataTransformer;
 import org.opendatadiscovery.client.model.DataTransformerRun;
+import org.opendatadiscovery.oddrn.Generator;
 
 import java.util.List;
 import java.util.Objects;
@@ -59,7 +60,7 @@ public class DataEntityMapper {
         return new DataEntity()
             .type(DataEntityType.TABLE)
             .dataTransformer(new DataTransformer().sql(sql))
-            .oddrn(Utils.sqlGenerator(url, tableName));
+            .oddrn(Generator.getInstance().generate(Utils.sqlOddrnPath(url, tableName)));
     }
 
     public static String map(final String namespace, final String file) {

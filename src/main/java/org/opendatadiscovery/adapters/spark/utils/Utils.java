@@ -2,8 +2,6 @@ package org.opendatadiscovery.adapters.spark.utils;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkContext;
 import org.opendatadiscovery.oddrn.Generator;
 import org.opendatadiscovery.oddrn.JdbcUrlParser;
@@ -14,7 +12,6 @@ import org.opendatadiscovery.oddrn.model.MysqlPath;
 import org.opendatadiscovery.oddrn.model.OddrnPath;
 import org.opendatadiscovery.oddrn.model.PostgreSqlPath;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
 import java.util.Properties;
@@ -38,36 +35,23 @@ public class Utils {
             .orElse(outputPath.getScheme());
     }
 
-    public static Path getDirectoryPath(final Path p, final Configuration hadoopConf) {
-        try {
-            if (p.getFileSystem(hadoopConf).getFileStatus(p).isFile()) {
-                return p.getParent();
-            } else {
-                return p;
-            }
-        } catch (IOException e) {
-            log.warn("Unable to get file system for path ", e);
-            return p;
-        }
-    }
-
-    public static String sqlGenerator(final String url, final String tableName) {
+    public static OddrnPath sqlOddrnPath(final String url, final String tableName) {
         try {
             final OddrnPath oddrnPath = new JdbcUrlParser().parse(url);
             switch (oddrnPath.prefix()) {
                 case "//mysql":
-                    return Generator.getInstance().generate(((MysqlPath) oddrnPath)
+                    return ((MysqlPath) oddrnPath)
                         .toBuilder()
                         .table(tableName)
-                        .build());
+                        .build();
                 case "//postgresql":
-                    return Generator.getInstance().generate(((PostgreSqlPath) oddrnPath)
+                    return ((PostgreSqlPath) oddrnPath)
                         .toBuilder()
                         .schema("public")
                         .table(tableName)
-                        .build());
+                        .build();
                 default:
-                    return "!" + url + "/" + tableName;
+                    return null;
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -124,7 +108,8 @@ public class Utils {
 
     public static Optional<String> s3endpoint(final String key) {
         return Optional
-            .ofNullable(SparkContext.getOrCreate().hadoopConfiguration()).map(h -> h.get(key));
+            .ofNullable(SparkContext.getOrCreate().hadoopConfiguration())
+            .map(h -> h.get(key));
     }
 
     public static String getProperty(final Properties properties, final String key) {

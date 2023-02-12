@@ -15,7 +15,7 @@ public class ExecutionContextFactory {
     private static final String ODD_ENABLED_ENTRY = "spark.odd.enabled";
     private static final String ODD_HOST_ENTRY = "spark.odd.host.url";
 
-    public static ExecutionContext create() {
+    public static ExecutionContext create(final String applicationName) {
         final SparkConf sparkConf = SparkEnv.get().conf();
 
         final boolean enabled = sparkConf.getOption(ODD_ENABLED_ENTRY)
@@ -24,17 +24,20 @@ public class ExecutionContextFactory {
 
         if (!enabled) {
             log.warn("{} property is not equal to true. Spark Listener will not collect metadata", ODD_ENABLED_ENTRY);
-            return new NoOpExecutionContext();
+            return new LoggingExecutionContext(applicationName, "test");
         }
 
-        final Option<String> oddPlatformUrl = sparkConf.getOption(ODD_HOST_ENTRY).filter(URL_VALIDATOR::isValid);
+        // TODO: validate ODD Platform URL
+        final Option<String> oddPlatformUrl = sparkConf
+            .getOption(ODD_HOST_ENTRY);
+//            .filter(URL_VALIDATOR::isValid);
 
         if (oddPlatformUrl.isEmpty()) {
             log.warn("Couldn't find or validate ODD Platform URL from {} property. " +
                 "Spark Listener will not collect metadata", ODD_HOST_ENTRY);
-            return new NoOpExecutionContext();
+            return new LoggingExecutionContext(applicationName, "test");
         }
 
-        return new ExecutionContextImpl(oddPlatformUrl.get());
+        return new HttpExecutionContext(applicationName, "test", oddPlatformUrl.get());
     }
 }
