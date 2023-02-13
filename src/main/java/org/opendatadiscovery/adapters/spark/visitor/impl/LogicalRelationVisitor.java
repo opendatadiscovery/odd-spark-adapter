@@ -82,7 +82,6 @@ public class LogicalRelationVisitor extends QueryPlanVisitor<LogicalRelation> {
 
     private List<String> extractTableNames(final String tableOrQuery) {
         try {
-            // TODO: why the fuck?
             final String sql = tableOrQuery.substring(tableOrQuery.indexOf("(") + 1, tableOrQuery.indexOf(")"));
             final Statement statement = CCJSqlParserUtil.parse(sql);
 

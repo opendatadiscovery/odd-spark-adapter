@@ -18,6 +18,7 @@ import org.apache.spark.scheduler.ActiveJob;
 import org.apache.spark.scheduler.ResultStage;
 import org.apache.spark.util.SerializableJobConf;
 import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
+import org.opendatadiscovery.oddrn.model.OddrnPath;
 import scala.Function2;
 import scala.collection.Iterator;
 import scala.collection.JavaConversions;
@@ -25,7 +26,6 @@ import scala.collection.Seq;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,10 +38,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.opendatadiscovery.adapters.spark.utils.Utils.CAMEL_TO_SNAKE_CASE;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.S3;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.S3A;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.S3N;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.fileGenerator;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.namespaceUri;
+import static org.opendatadiscovery.adapters.spark.utils.Utils.s3Generator;
 
 @Slf4j
 public class RddMapper {
-
     public String name(final RDD<?> rdd) {
         String rddName = rdd.name();
         if (rddName == null
@@ -79,17 +84,19 @@ public class RddMapper {
         return dependencyName;
     }
 
-    public List<URI> inputs(final RDD<?> finalRdd) {
-        final Set<RDD<?>> rdds = flatten(finalRdd);
-        return rdds.stream()
+    public List<OddrnPath> inputs(final RDD<?> finalRdd) {
+        return flatten(finalRdd).stream()
             .map(this::getInputPaths)
             .filter(Objects::nonNull)
             .flatMap(List::stream)
             .map(Path::toUri)
+            .map(uri -> mapUriToOddrn(namespaceUri(uri), uri.getPath()))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
             .collect(Collectors.toList());
     }
 
-    public List<URI> outputs(final ActiveJob job, final Configuration config) {
+    public List<OddrnPath> outputs(final ActiveJob job, final Configuration config) {
         Configuration jc = new JobConf();
         if (job.finalStage() instanceof ResultStage) {
             final Function2<TaskContext, Iterator<?>, ?> fn = ((ResultStage) job.finalStage()).func();
@@ -117,7 +124,9 @@ public class RddMapper {
         final Path outputPath = getOutputPath(jc);
         log.info("Found output path {} from RDD {}", outputPath, job.finalStage().rdd());
         if (outputPath != null) {
-            return Collections.singletonList(outputPath.toUri());
+            return mapUriToOddrn(namespaceUri(outputPath.toUri()), outputPath.toUri().getPath())
+                .map(Collections::singletonList)
+                .orElse(Collections.emptyList());
         }
         return Collections.emptyList();
     }
@@ -173,10 +182,18 @@ public class RddMapper {
                 return Arrays.asList(
                     org.apache.hadoop.mapreduce.lib.input.FileInputFormat.getInputPaths(
                         new Job(((NewHadoopRDD<?, ?>) rdd).getConf())));
-            } catch (IOException e) {
-                log.error("ODD spark agent could not get input paths", e);
+            } catch (final IOException e) {
+                log.error("Could not get input paths", e);
             }
         }
         return null;
+    }
+
+    private Optional<OddrnPath> mapUriToOddrn(final String namespace, final String path) {
+        if (namespace.contains(S3A) || namespace.contains(S3N) || namespace.contains(S3)) {
+            return s3Generator(namespace, path);
+        }
+
+        return fileGenerator(namespace, path);
     }
 }

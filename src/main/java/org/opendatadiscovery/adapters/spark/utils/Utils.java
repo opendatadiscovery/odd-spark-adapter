@@ -3,7 +3,6 @@ package org.opendatadiscovery.adapters.spark.utils;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.SparkContext;
-import org.opendatadiscovery.oddrn.Generator;
 import org.opendatadiscovery.oddrn.JdbcUrlParser;
 import org.opendatadiscovery.oddrn.model.AwsS3Path;
 import org.opendatadiscovery.oddrn.model.CustomS3Path;
@@ -58,21 +57,19 @@ public class Utils {
         }
     }
 
-    public static String fileGenerator(final String namespace, final String file) {
+    public static Optional<OddrnPath> fileGenerator(final String namespace, final String file) {
         if (namespace.contains(HDFS)) {
-            try {
-                return Generator.getInstance().generate(HdfsPath.builder()
-                    .site(namespace.replace(HDFS, ""))
-                    .path(file).build());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            return Optional.of(HdfsPath.builder()
+                .site(namespace.replace(HDFS, ""))
+                .path(file)
+                .build());
         }
-        return "//" + namespace + file.replace(namespace + ":/", "");
+
+        return Optional.empty();
     }
 
-    public static String s3Generator(final String namespace, final String path) {
-        String bucket = "";
+    public static Optional<OddrnPath> s3Generator(final String namespace, final String path) {
+        String bucket;
         String endpoint = "";
         if (namespace.contains(S3A)) {
             bucket = namespace.replace(S3A, "");
@@ -85,25 +82,24 @@ public class Utils {
         }
         String key = path.replace(namespace, "");
         key = key.startsWith("/") ? key.substring(1) : key;
-        try {
-            if (endpoint.isEmpty() || endpoint.contains(AMAZONAWS_COM)) {
-                final AwsS3Path.AwsS3PathBuilder builder = AwsS3Path.builder()
-                    .bucket(bucket);
-                if (key.isEmpty()) {
-                    return Generator.getInstance().generate(builder.build());
-                }
-                return Generator.getInstance().generate(builder.key(key).build());
-            }
-            final CustomS3Path.CustomS3PathBuilder builder = CustomS3Path.builder()
-                .endpoint(endpoint)
+
+        if (endpoint.isEmpty() || endpoint.contains(AMAZONAWS_COM)) {
+            final AwsS3Path.AwsS3PathBuilder builder = AwsS3Path.builder()
                 .bucket(bucket);
             if (key.isEmpty()) {
-                return Generator.getInstance().generate(builder.build());
+                return Optional.of(builder.build());
             }
-            return Generator.getInstance().generate(builder.key(key).build());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            return Optional.of(builder.key(key).build());
         }
+        final CustomS3Path.CustomS3PathBuilder builder = CustomS3Path.builder()
+            .endpoint(endpoint)
+            .bucket(bucket);
+
+        if (key.isEmpty()) {
+            return Optional.of(builder.build());
+        }
+
+        return Optional.of(builder.key(key).build());
     }
 
     public static Optional<String> s3endpoint(final String key) {

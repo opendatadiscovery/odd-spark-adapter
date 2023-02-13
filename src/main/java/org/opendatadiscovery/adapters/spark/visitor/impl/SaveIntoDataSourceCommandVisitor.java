@@ -12,7 +12,7 @@ import org.opendatadiscovery.adapters.spark.utils.OddrnUtils;
 import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
 import org.opendatadiscovery.adapters.spark.visitor.QueryPlanVisitor;
-import org.opendatadiscovery.adapters.spark.visitor.VisitorFactoryProvider;
+import org.opendatadiscovery.adapters.spark.visitor.VisitorFactoryFacade;
 import org.opendatadiscovery.oddrn.model.KafkaPath;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
@@ -32,7 +32,7 @@ public class SaveIntoDataSourceCommandVisitor extends QueryPlanVisitor<SaveIntoD
 
     @Override
     public LogicalPlanDependencies apply(final LogicalPlan logicalPlan) {
-        final List<QueryPlanVisitor<? extends LogicalPlan>> visitors = VisitorFactoryProvider
+        final List<QueryPlanVisitor<? extends LogicalPlan>> visitors = VisitorFactoryFacade
             .create(sparkContext)
             .getVisitors();
 

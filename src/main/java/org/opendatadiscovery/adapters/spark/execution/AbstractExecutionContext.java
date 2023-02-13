@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.SparkContext;
 import org.apache.spark.SparkContext$;
-import org.apache.spark.rdd.RDD;
 import org.apache.spark.scheduler.ActiveJob;
 import org.apache.spark.scheduler.JobFailed;
 import org.apache.spark.scheduler.JobResult;
@@ -16,9 +15,8 @@ import org.apache.spark.sql.execution.QueryExecution;
 import org.apache.spark.sql.execution.SQLExecution;
 import org.opendatadiscovery.adapters.spark.dto.ExecutionPayload;
 import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
-import org.opendatadiscovery.adapters.spark.mapper.DataEntityMapper;
 import org.opendatadiscovery.adapters.spark.mapper.RddMapper;
-import org.opendatadiscovery.adapters.spark.visitor.VisitorFactoryProvider;
+import org.opendatadiscovery.adapters.spark.visitor.VisitorFactoryFacade;
 import org.opendatadiscovery.client.model.DataEntity;
 import org.opendatadiscovery.client.model.DataEntityList;
 import org.opendatadiscovery.client.model.DataEntityType;
@@ -45,7 +43,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.time.ZoneOffset.UTC;
-import static org.opendatadiscovery.adapters.spark.utils.Utils.namespaceUri;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -59,20 +56,10 @@ public abstract class AbstractExecutionContext implements ExecutionContext {
 
     @Override
     public void reportSparkRddJob(final ActiveJob job) {
-        final RDD<?> finalRDD = job.finalStage().rdd();
-
-        final List<String> inputs = rddMapper.inputs(finalRDD)
-            .stream()
-            .map(input -> DataEntityMapper.map(namespaceUri(input), input.getPath()))
-            .collect(Collectors.toList());
-
-        final List<String> outputs = rddMapper.outputs(job, null)
-            .stream()
-            .map(input -> DataEntityMapper.map(namespaceUri(input), input.getPath()))
-            .collect(Collectors.toList());
-
-        // TODO: fix
-        dependencies.add(LogicalPlanDependencies.empty());
+        dependencies.add(new LogicalPlanDependencies(
+            rddMapper.inputs(job.finalStage().rdd()),
+            rddMapper.outputs(job, null)
+        ));
     }
 
     @Override
@@ -96,7 +83,8 @@ public abstract class AbstractExecutionContext implements ExecutionContext {
 
         final LogicalPlan logicalPlan = queryExecution.logical();
 
-        VisitorFactoryProvider.create(sparkContext.get()).getVisitors()
+        VisitorFactoryFacade.create(sparkContext.get())
+            .getVisitors()
             .stream()
             .filter(v -> v.isDefinedAt(logicalPlan))
             .map(v -> v.apply(logicalPlan))
