@@ -1,4 +1,4 @@
-package org.opendatadiscovery.adapters.spark.visitor;
+package org.opendatadiscovery.adapters.spark.visitor.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,11 +7,12 @@ import org.apache.spark.SparkContext;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand;
 import org.apache.spark.sql.kafka010.KafkaSourceProvider;
-import org.opendatadiscovery.adapters.spark.VisitorFactoryProvider;
 import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
 import org.opendatadiscovery.adapters.spark.utils.OddrnUtils;
 import org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
+import org.opendatadiscovery.adapters.spark.visitor.QueryPlanVisitor;
+import org.opendatadiscovery.adapters.spark.visitor.VisitorFactoryProvider;
 import org.opendatadiscovery.oddrn.model.KafkaPath;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;

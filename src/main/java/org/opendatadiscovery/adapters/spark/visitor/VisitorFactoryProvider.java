@@ -1,4 +1,4 @@
-package org.opendatadiscovery.adapters.spark;
+package org.opendatadiscovery.adapters.spark.visitor;
 
 import lombok.experimental.UtilityClass;
 import org.apache.spark.SparkContext;

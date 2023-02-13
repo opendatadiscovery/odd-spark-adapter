@@ -1,4 +1,4 @@
-package org.opendatadiscovery.adapters.spark.visitor;
+package org.opendatadiscovery.adapters.spark.visitor.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +16,7 @@ import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation;
 import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
 import org.opendatadiscovery.adapters.spark.utils.OddrnUtils;
 import org.opendatadiscovery.adapters.spark.utils.Utils;
+import org.opendatadiscovery.adapters.spark.visitor.QueryPlanVisitor;
 import org.opendatadiscovery.oddrn.model.OddrnPath;
 
 import java.util.Collections;

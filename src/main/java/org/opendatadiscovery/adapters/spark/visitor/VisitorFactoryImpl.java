@@ -1,13 +1,12 @@
-package org.opendatadiscovery.adapters.spark;
+package org.opendatadiscovery.adapters.spark.visitor;
 
 import lombok.Getter;
 import org.apache.spark.SparkContext;
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
-import org.opendatadiscovery.adapters.spark.visitor.KafkaRelationVisitor;
-import org.opendatadiscovery.adapters.spark.visitor.LogicalRelationVisitor;
-import org.opendatadiscovery.adapters.spark.visitor.QueryPlanVisitor;
-import org.opendatadiscovery.adapters.spark.visitor.SaveIntoDataSourceCommandVisitor;
-import org.opendatadiscovery.adapters.spark.visitor.SnowflakeRelationVisitor;
+import org.opendatadiscovery.adapters.spark.visitor.impl.KafkaRelationVisitor;
+import org.opendatadiscovery.adapters.spark.visitor.impl.LogicalRelationVisitor;
+import org.opendatadiscovery.adapters.spark.visitor.impl.SaveIntoDataSourceCommandVisitor;
+import org.opendatadiscovery.adapters.spark.visitor.impl.SnowflakeRelationVisitor;
 
 import java.util.ArrayList;
 import java.util.Arrays;

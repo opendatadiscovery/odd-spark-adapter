@@ -1,27 +1,19 @@
 package org.opendatadiscovery.adapters.spark.execution;
 
 import lombok.extern.slf4j.Slf4j;
-
-import java.time.Instant;
-import java.time.OffsetDateTime;
-
-import static java.time.ZoneOffset.UTC;
+import org.opendatadiscovery.adapters.spark.dto.ExecutionPayload;
+import org.opendatadiscovery.client.model.DataEntityList;
 
 @Slf4j
 public class LoggingExecutionContext extends AbstractExecutionContext {
-    public LoggingExecutionContext(final String applicationName, final String hostName) {
-        super(applicationName, hostName);
+    public LoggingExecutionContext(final ExecutionPayload executionPayload) {
+        super(executionPayload);
     }
 
     @Override
     public void reportApplicationEnd() {
-        log.info("Application name: {}", getApplicationName());
-        log.info("Host name: {}", getHostName());
-        log.info("Job End time: {}", OffsetDateTime.ofInstant(Instant.ofEpochMilli(getJobEndTime()), UTC));
-        if (getErrorMessage() != null) {
-            log.info("Error message: {}", getErrorMessage());
-        }
-        log.info("Properties are: {}", getProperties());
-        log.info("Final dependencies are {}", dependencies);
+        final DataEntityList dataEntityList = buildODDModels();
+
+        log.info("Result data entity list: {}", dataEntityList);
     }
 }

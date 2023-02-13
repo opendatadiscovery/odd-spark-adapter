@@ -1,4 +1,4 @@
-package org.opendatadiscovery.adapters.spark.visitor;
+package org.opendatadiscovery.adapters.spark.visitor.impl;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -11,8 +11,8 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.apache.spark.sql.execution.datasources.LogicalRelation;
 import org.opendatadiscovery.adapters.spark.dto.LogicalPlanDependencies;
 import org.opendatadiscovery.adapters.spark.utils.OddrnUtils;
+import org.opendatadiscovery.adapters.spark.visitor.QueryPlanVisitor;
 import org.opendatadiscovery.oddrn.model.OddrnPath;
-import org.opendatadiscovery.oddrn.model.SnowflakePath;
 import scala.collection.JavaConverters;
 
 import java.util.List;

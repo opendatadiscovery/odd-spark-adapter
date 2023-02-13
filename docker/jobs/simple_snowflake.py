@@ -17,21 +17,21 @@ query = '(select vehicle_id from mta_reports r left join vehicle v on r.vehicle_
 df_mysql = spark.read.jdbc(url=source_url, table=query, properties=source_properties)
 
 sfReadOptions = {
-    "sfURL": "mwlgidp-znb56211.snowflakecomputing.com",
-    "sfUser": "ndementev",
+    "sfURL": "",
+    "sfUser": "",
     "sfPassword": "",
-    "sfDatabase": "SNOWFLAKE_SAMPLE_DATA",
-    "sfSchema": "TPCDS_SF100TCL",
-    "sfWarehouse": "COMPUTE_WH"
+    "sfDatabase": "",
+    "sfSchema": "",
+    "sfWarehouse": ""
 }
 
 sfWriteOptions = {
-    "sfURL": "mwlgidp-znb56211.snowflakecomputing.com",
-    "sfUser": "ndementev",
+    "sfURL": "",
+    "sfUser": "",
     "sfPassword": "",
-    "sfDatabase": "TEST_DATABASE",
-    "sfSchema": "TEST_SCHEMA",
-    "sfWarehouse": "COMPUTE_WH"
+    "sfDatabase": "",
+    "sfSchema": "",
+    "sfWarehouse": ""
 }
 
 SNOWFLAKE_SOURCE_NAME = "net.snowflake.spark.snowflake"

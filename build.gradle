@@ -25,14 +25,13 @@ configurations.all {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-webflux:2.5.0")
-
     compileOnly "org.apache.spark:spark-core_2.12:3.3.1"
     compileOnly "org.apache.spark:spark-sql_2.12:3.3.1"
     compileOnly "org.apache.spark:spark-hive_2.12:3.3.1"
     compileOnly "net.snowflake:spark-snowflake_2.12:2.11.0-spark_3.3"
     compileOnly "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.1"
 
+    extraLibs "org.springframework.boot:spring-boot-starter-webflux:2.5.0"
     extraLibs "org.opendatadiscovery:oddrn-generator-java:0.1.15"
     extraLibs "org.opendatadiscovery:ingestion-contract-client:0.1.19"
     extraLibs "com.github.jsqlparser:jsqlparser:4.2"

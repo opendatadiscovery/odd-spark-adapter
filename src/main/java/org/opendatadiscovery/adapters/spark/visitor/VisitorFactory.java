@@ -1,7 +1,6 @@
-package org.opendatadiscovery.adapters.spark;
+package org.opendatadiscovery.adapters.spark.visitor;
 
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
-import org.opendatadiscovery.adapters.spark.visitor.QueryPlanVisitor;
 
 import java.util.List;
 
