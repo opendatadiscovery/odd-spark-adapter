@@ -1,9 +1,11 @@
-name: CI
+name: PR build
+
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,4 +19,4 @@ jobs:
           distribution: 'adopt'
           cache: gradle
       - name: Build with Gradle
-        run: ./gradlew jar
+        run: ./gradlew build
