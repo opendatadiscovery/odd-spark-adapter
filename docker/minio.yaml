@@ -1,0 +1,40 @@
+version: '3.3'
+
+services:
+  minio:
+    image: minio/minio:latest
+    ports:
+      # API
+      - 9000:9000
+      # Console
+      - 9001:9001
+    command: "server /data --console-address \":9001\""
+    environment:
+      - "MINIO_ROOT_USER=minio_user"
+      - "MINIO_ROOT_PASSWORD=minio_password"
+    networks:
+      - spark
+
+  minio-enricher:
+    image: minio/mc:latest
+    volumes:
+      - ./dump/minio:/dumps
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://minio:9000 minio_user minio_password;
+      /usr/bin/mc mb myminio/wordcount;
+      /usr/bin/mc cp /dumps/words.txt myminio/wordcount;
+      /usr/bin/mc mb myminio/trafficspeed;
+      /usr/bin/mc cp /dumps/traffic-speed.csv myminio/trafficspeed;
+      /usr/bin/mc mb myminio/deltabucket;
+      "
+      exit 0;
+    networks:
+      - spark
+
+networks:
+  spark:
+    external: true
+    name: spark

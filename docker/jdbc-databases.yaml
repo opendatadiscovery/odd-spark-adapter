@@ -1,0 +1,27 @@
+version: '3.3'
+
+services:
+  source-db:
+    image: mysql:8.0.32
+    command: --default-authentication-plugin=mysql_native_password --lower_case_table_names=1
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+    volumes:
+      - ./dump/mysql:/docker-entrypoint-initdb.d
+    networks:
+      - spark
+
+  target-db:
+    image: postgres:15.1-alpine
+    environment:
+      - POSTGRES_PASSWORD=casa1234
+    volumes:
+      - ./dump/pg:/docker-entrypoint-initdb.d
+    networks:
+      - spark
+
+networks:
+  spark:
+    external: true
+    name: spark

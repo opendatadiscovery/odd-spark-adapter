@@ -1,14 +1,8 @@
 package org.opendatadiscovery.adapters.spark.utils;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.Optional;
-import java.util.Properties;
+import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkContext;
-import org.opendatadiscovery.oddrn.Generator;
 import org.opendatadiscovery.oddrn.JdbcUrlParser;
 import org.opendatadiscovery.oddrn.model.AwsS3Path;
 import org.opendatadiscovery.oddrn.model.CustomS3Path;
@@ -17,7 +11,12 @@ import org.opendatadiscovery.oddrn.model.MysqlPath;
 import org.opendatadiscovery.oddrn.model.OddrnPath;
 import org.opendatadiscovery.oddrn.model.PostgreSqlPath;
 
+import java.net.URI;
+import java.util.Optional;
+import java.util.Properties;
+
 @Slf4j
+@UtilityClass
 public class Utils {
     public static final String S3A_ENDPOINT = "fs.s3a.endpoint";
     public static final String S3N_ENDPOINT = "fs.s3n.endpoint";
@@ -27,65 +26,50 @@ public class Utils {
     public static final String S3N = "s3n://";
     public static final String HDFS = "hdfs://";
     public static String CAMEL_TO_SNAKE_CASE =
-            "[\\s\\-_]?((?<=.)[A-Z](?=[a-z\\s\\-_])|(?<=[^A-Z])[A-Z]|((?<=[\\s\\-_])[a-z\\d]))";
+        "[\\s\\-_]?((?<=.)[A-Z](?=[a-z\\s\\-_])|(?<=[^A-Z])[A-Z]|((?<=[\\s\\-_])[a-z\\d]))";
 
     public static String namespaceUri(final URI outputPath) {
         return Optional.ofNullable(outputPath.getAuthority())
-                .map(a -> String.format("%s://%s", outputPath.getScheme(), a))
-                .orElse(outputPath.getScheme());
+            .map(a -> String.format("%s://%s", outputPath.getScheme(), a))
+            .orElse(outputPath.getScheme());
     }
 
-    public static Path getDirectoryPath(final Path p, final Configuration hadoopConf) {
-        try {
-            if (p.getFileSystem(hadoopConf).getFileStatus(p).isFile()) {
-                return p.getParent();
-            } else {
-                return p;
-            }
-        } catch (IOException e) {
-            log.warn("Unable to get file system for path ", e);
-            return p;
-        }
-    }
-
-    public static String sqlGenerator(final String url, final String tableName) {
+    public static OddrnPath sqlOddrnPath(final String url, final String tableName) {
         try {
             final OddrnPath oddrnPath = new JdbcUrlParser().parse(url);
             switch (oddrnPath.prefix()) {
-                case "//mysql" :
-                    return new Generator().generate(((MysqlPath) oddrnPath)
-                            .toBuilder()
-                            .table(tableName)
-                            .build(), "table");
-                case "//postgresql" :
-                    return new Generator().generate(((PostgreSqlPath) oddrnPath)
-                            .toBuilder()
-                            .schema("public")
-                            .table(tableName)
-                            .build(), "table");
+                case "//mysql":
+                    return ((MysqlPath) oddrnPath)
+                        .toBuilder()
+                        .table(tableName)
+                        .build();
+                case "//postgresql":
+                    return ((PostgreSqlPath) oddrnPath)
+                        .toBuilder()
+                        .schema("public")
+                        .table(tableName)
+                        .build();
                 default:
-                    return "!" + url + "/" + tableName;
+                    return null;
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static String fileGenerator(final String namespace, final String file) {
+    public static Optional<OddrnPath> fileGenerator(final String namespace, final String file) {
         if (namespace.contains(HDFS)) {
-            try {
-                return new Generator().generate(HdfsPath.builder()
-                        .site(namespace.replace(HDFS, ""))
-                        .path(file).build(), "path");
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            return Optional.of(HdfsPath.builder()
+                .site(namespace.replace(HDFS, ""))
+                .path(file)
+                .build());
         }
-        return "//" + namespace + file.replace(namespace + ":/", "");
+
+        return Optional.empty();
     }
 
-    public static String s3Generator(final String namespace, final String path) {
-        String bucket = "";
+    public static Optional<OddrnPath> s3Generator(final String namespace, final String path) {
+        String bucket;
         String endpoint = "";
         if (namespace.contains(S3A)) {
             bucket = namespace.replace(S3A, "");
@@ -98,30 +82,30 @@ public class Utils {
         }
         String key = path.replace(namespace, "");
         key = key.startsWith("/") ? key.substring(1) : key;
-        try {
-            if (endpoint.isEmpty() || endpoint.contains(AMAZONAWS_COM)) {
-                final AwsS3Path.AwsS3PathBuilder builder = AwsS3Path.builder()
-                        .bucket(bucket);
-                if (key.isEmpty()) {
-                    return new Generator().generate(builder.build(), "bucket");
-                }
-                return new Generator().generate(builder.key(key).build(), "key");
-            }
-            final CustomS3Path.CustomS3PathBuilder builder = CustomS3Path.builder()
-                    .endpoint(endpoint)
-                    .bucket(bucket);
+
+        if (endpoint.isEmpty() || endpoint.contains(AMAZONAWS_COM)) {
+            final AwsS3Path.AwsS3PathBuilder builder = AwsS3Path.builder()
+                .bucket(bucket);
             if (key.isEmpty()) {
-                return new Generator().generate(builder.build(), "bucket");
+                return Optional.of(builder.build());
             }
-            return new Generator().generate(builder.key(key).build(), "key");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            return Optional.of(builder.key(key).build());
         }
+        final CustomS3Path.CustomS3PathBuilder builder = CustomS3Path.builder()
+            .endpoint(endpoint)
+            .bucket(bucket);
+
+        if (key.isEmpty()) {
+            return Optional.of(builder.build());
+        }
+
+        return Optional.of(builder.key(key).build());
     }
 
     public static Optional<String> s3endpoint(final String key) {
         return Optional
-                .ofNullable(SparkContext.getOrCreate().hadoopConfiguration()).map(h -> h.get(key));
+            .ofNullable(SparkContext.getOrCreate().hadoopConfiguration())
+            .map(h -> h.get(key));
     }
 
     public static String getProperty(final Properties properties, final String key) {

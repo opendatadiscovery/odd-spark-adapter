@@ -1,11 +1,9 @@
 plugins {
-    id 'checkstyle'
     id 'java'
-    id 'io.freefair.lombok' version '5.0.1'
 }
 
-group = 'com.provectus'
-version = file('VERSION').text
+group = 'org.opendatadiscovery'
+version = "0.0.1"
 sourceCompatibility = '8'
 
 repositories {
@@ -18,55 +16,31 @@ configurations {
     extraLibs
 }
 
-ext {
-    sparkVersion = '3.1.2'
+configurations.all {
+    exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+
+    resolutionStrategy {
+        force "com.fasterxml.jackson:jackson-bom:2.13.4"
+    }
 }
 
 dependencies {
-    implementation "org.springframework.boot:spring-boot-starter-webflux:2.5.0"
-    implementation "com.google.cloud.spark:spark-bigquery_2.12:0.21.1"
-    implementation "com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.21.1"
-    implementation "org.apache.spark:spark-core_2.12:${sparkVersion}"
-    implementation "org.apache.spark:spark-sql_2.12:${sparkVersion}"
-    implementation "org.apache.spark:spark-hive_2.12:${sparkVersion}"
-    extraLibs group: 'org.opendatadiscovery', name: 'oddrn-generator-java', version: '0.1.7'
-    extraLibs group: 'org.opendatadiscovery', name: 'ingestion-contract-client', version: '0.1.4'
-    extraLibs group: 'com.github.jsqlparser', name: 'jsqlparser', version: '4.2'
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
-    testImplementation 'org.mockito:mockito-core:2.19.0'
-    configurations.compile.extendsFrom(configurations.extraLibs)
-}
+    compileOnly "org.apache.spark:spark-core_2.12:3.3.1"
+    compileOnly "org.apache.spark:spark-sql_2.12:3.3.1"
+    compileOnly "org.apache.spark:spark-hive_2.12:3.3.1"
+    compileOnly "net.snowflake:spark-snowflake_2.12:2.11.0-spark_3.3"
+    compileOnly "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.1"
 
-checkstyle {
-    configFile = project(':').file('config/checkstyle/checkstyle.xml')
-    configProperties = ["suppressionFile": project(':').file('config/checkstyle/suppressions.xml')]
-    ignoreFailures = false
-    maxWarnings = 0
-}
+    extraLibs "org.springframework.boot:spring-boot-starter-webflux:2.5.0"
+    extraLibs "org.opendatadiscovery:oddrn-generator-java:0.1.15"
+    extraLibs "org.opendatadiscovery:ingestion-contract-client:0.1.19"
+    extraLibs "com.github.jsqlparser:jsqlparser:4.2"
+    extraLibs 'commons-validator:commons-validator:1.7'
 
-task buildlessCheckstyleMain(type: Checkstyle) {
-    configFile = project(':').file('config/checkstyle/checkstyle.xml')
-    source 'src/main/java'
-    classpath = files()
-    configProperties = ["suppressionFile": project(':').file('config/checkstyle/suppressions.xml')]
-    ignoreFailures = false
-    maxWarnings = 0
-}
+    compileOnly "org.projectlombok:lombok:1.18.24"
+    annotationProcessor "org.projectlombok:lombok:1.18.24"
 
-task buildlessCheckstyleTest(type: Checkstyle) {
-    configFile = project(':').file('config/checkstyle/checkstyle.xml')
-    source 'src/test/java'
-    classpath = files()
-    configProperties = ["suppressionFile": project(':').file('config/checkstyle/suppressions.xml')]
-    ignoreFailures = false
-    maxWarnings = 0
-}
-
-tasks.withType(Checkstyle) {
-    reports {
-        xml.enabled false
-        html.enabled false
-    }
+    configurations.compileOnly.extendsFrom(configurations.extraLibs)
 }
 
 test {
@@ -74,14 +48,10 @@ test {
 }
 
 jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from {
         configurations.extraLibs.collect { it.isDirectory() ? it : zipTree(it) }
     }
-    manifest {
-        attributes(
-                "Premain-Class": 'org.opendatadiscovery.adapters.spark.SparkAgent',
-                "Agent-Class": 'org.opendatadiscovery.adapters.spark.SparkAgent'
-        )
-    }
+
     zip64 true
 }
