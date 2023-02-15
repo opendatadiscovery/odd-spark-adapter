@@ -3,7 +3,6 @@ plugins {
 }
 
 group = 'org.opendatadiscovery'
-version = "0.0.1"
 sourceCompatibility = '8'
 
 repositories {
