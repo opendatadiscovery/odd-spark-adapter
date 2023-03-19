@@ -44,7 +44,6 @@ public class ExecutionContextFactory {
             return new LoggingExecutionContext(payload);
         }
 
-        // TODO: validate ODD Platform URL
         final Option<String> oddPlatformUrl = sparkConf
             .getOption(ODD_HOST_ENTRY)
             .filter(URL_VALIDATOR::isValid);
