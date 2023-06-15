@@ -30,13 +30,13 @@ public class OddrnUtils {
         final String schema = options.get("sfschema");
 
         return tableNames.stream()
-                .map(tableName -> SnowflakePath.builder()
-                        .account(account)
-                        .database(database)
-                        .schema(schema)
-                        .table(tableName)
-                        .build())
-                .collect(Collectors.toList());
+            .map(tableName -> SnowflakePath.builder()
+                .account(account)
+                .database(database)
+                .schema(schema)
+                .table(tableName)
+                .build())
+            .collect(Collectors.toList());
     }
 
     public static Optional<OddrnPath> resolveS3Oddrn(final SparkConf sparkConf, final String path) {
@@ -67,19 +67,19 @@ public class OddrnUtils {
 
         if (endpoint == null) {
             return Option.apply(AwsS3Path.builder()
-                    .bucket(pathPayload.getKey())
-                    .key(pathPayload.getValue())
-                    .build());
+                .bucket(pathPayload.getKey())
+                .key(pathPayload.getValue())
+                .build());
         }
 
         try {
             String uri = new URI(endpoint).getHost();
 
             return Option.apply(CustomS3Path.builder()
-                    .endpoint(uri)
-                    .bucket(pathPayload.getKey())
-                    .key(pathPayload.getValue())
-                    .build());
+                .endpoint(uri)
+                .bucket(pathPayload.getKey())
+                .key(pathPayload.getValue())
+                .build());
         } catch (URISyntaxException e) {
             log.error(String.format("Could not get host for an endpoint: %s", endpoint));
             return Option.empty();
