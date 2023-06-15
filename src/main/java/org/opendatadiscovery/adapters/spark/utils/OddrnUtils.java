@@ -10,11 +10,13 @@ import org.opendatadiscovery.oddrn.model.OddrnPath;
 import org.opendatadiscovery.oddrn.model.SnowflakePath;
 import scala.Option;
 
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.net.URI;
 
 import static org.opendatadiscovery.adapters.spark.utils.ScalaConversionUtils.asJavaOptional;
 
@@ -49,28 +51,40 @@ public class OddrnUtils {
             return Optional.empty();
         }
 
-        return asJavaOptional(endpoint.map(e -> getS3Oddrn(e, path)).orElse(() -> Option.apply(getS3Oddrn(path))));
+        return asJavaOptional(
+            endpoint
+                .flatMap(ep -> getS3Oddrn(ep, path))
+                .orElse(() -> getS3Oddrn(path))
+        );
     }
 
-    private static OddrnPath getS3Oddrn(final String path) {
+    private static Option<OddrnPath> getS3Oddrn(final String path) {
         return getS3Oddrn(null, path);
     }
 
-    private static OddrnPath getS3Oddrn(final String endpoint, final String path) {
+    private static Option<OddrnPath> getS3Oddrn(final String endpoint, final String path) {
         final Pair<String, String> pathPayload = extractS3PayloadFromPath(path);
 
         if (endpoint == null) {
-            return AwsS3Path.builder()
+            return Option.apply(AwsS3Path.builder()
                 .bucket(pathPayload.getKey())
                 .key(pathPayload.getValue())
-                .build();
+                .build());
         }
 
-        return CustomS3Path.builder()
-            .endpoint(endpoint)
-            .bucket(pathPayload.getKey())
-            .key(pathPayload.getValue())
-            .build();
+        try {
+            String uri = new URI(endpoint).getHost();
+
+            return Option.apply(CustomS3Path.builder()
+                .endpoint(uri)
+                .bucket(pathPayload.getKey())
+                .key(pathPayload.getValue())
+                .build());
+        } catch (URISyntaxException e) {
+            log.error(String.format("Could not get host for an endpoint: %s", endpoint));
+            return Option.empty();
+        }
+
     }
 
     private static Pair<String, String> extractS3PayloadFromPath(final String path) {
