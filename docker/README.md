@@ -49,7 +49,7 @@ docker-compose -f docker/jdbc-databases.yaml up -d
 9. Run a Spark job
 ```bash
 docker exec -it spark /usr/local/spark-3.3.1-bin-hadoop3/bin/spark-submit \
-		--jars /odd-jar/odd-spark-adapter-local.jar
+		--jars /odd-jar/odd-spark-adapter-local.jar \
 		--conf "spark.odd.host.url=http://odd-platform:8080" \
 		--conf "spark.odd.oddrn.key=local" \
 		--packages org.postgresql:postgresql:42.2.22,mysql:mysql-connector-java:8.0.26 \
